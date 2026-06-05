@@ -43,7 +43,9 @@ import {
   Layers,
   Eye,
   EyeOff,
-  Brain
+  Brain,
+  Mail,
+  Bell
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ConnectButton, useCurrentAccount } from '@mysten/dapp-kit';
@@ -199,6 +201,33 @@ export default function App() {
     const saved = localStorage.getItem('sui_wealth_balance_visible');
     return saved !== 'false';
   });
+
+  // Email Alert Integration and Simulation State
+  const [emailAlertsEnabled, setEmailAlertsEnabled] = useState<boolean>(() => {
+    const saved = localStorage.getItem('penny_otter_email_alerts_enabled');
+    return saved === 'true';
+  });
+
+  const [userEmailAddress, setUserEmailAddress] = useState<string>(() => {
+    return localStorage.getItem('penny_otter_email_address') || 'ayobamioketona@gmail.com';
+  });
+
+  const [showEmailAlertMockToast, setShowEmailAlertMockToast] = useState<boolean>(false);
+  const [emailMockDetails, setEmailMockDetails] = useState<{
+    to: string;
+    subject: string;
+    body: string;
+    amount: number;
+    timestamp: string;
+  } | null>(null);
+
+  useEffect(() => {
+    localStorage.setItem('penny_otter_email_alerts_enabled', String(emailAlertsEnabled));
+  }, [emailAlertsEnabled]);
+
+  useEffect(() => {
+    localStorage.setItem('penny_otter_email_address', userEmailAddress);
+  }, [userEmailAddress]);
 
   useEffect(() => {
     localStorage.setItem('sui_wealth_balance_visible', String(isBalanceVisible));
@@ -467,7 +496,7 @@ export default function App() {
       senderAddress: '0x8b321ca22e239ffd15b0ca1dfac22da02fd81c88',
       amountSui: amt,
       timestamp: new Date().toISOString(),
-      title: 'Incoming SuiWealth PayStream Payment',
+      title: 'Incoming PennyOtter PayStream Payment',
       message: `${formatSui(amt)} received. Re-route or split dynamically?`,
       isPending: true,
     });
@@ -552,6 +581,34 @@ export default function App() {
     setIncomingAlert(null);
     setManualAllocationActive(false);
     showNotification(`Atoms aligned! Received SUI has completed execution loops.`, 'success');
+
+    // Trigger Simulated Email Alerts
+    if (emailAlertsEnabled) {
+      const activeRulesLabels = activeRules
+        .filter(r => r.isActive)
+        .map(r => {
+          const share = customAmount * (r.percentage / 100);
+          return `• ${r.name}: ${share.toFixed(2)} SUI (${r.percentage}%) routed directly into ${
+            r.destination === 'spending' ? 'Liquid Spending Balance' :
+            r.destination === 'flexible' ? 'oWealth Flexible Interest Vault' :
+            r.destination === 'target' ? 'Stated Savings Target' : 'Fixed Savings Term'
+          }`;
+        })
+        .join('\n');
+
+      setEmailMockDetails({
+        to: userEmailAddress || 'ayobamioketona@gmail.com',
+        subject: `PennyOtter Automated split compiled successfully | Received: +${customAmount.toFixed(1)} SUI`,
+        body: `Hi there!\n\nA fresh incoming PayStream of +${customAmount.toFixed(2)} SUI has been processed through your customized routing rules.\n\n` +
+          `🔐 PTB TX Block Signed: ${hash.slice(0, 16)}...${hash.slice(-12)}\n` +
+          `⏰ Timestamp: ${new Date().toLocaleString()}\n\n` +
+          `📋 Distribution Logs:\n${activeRulesLabels}\n\n` +
+          `Your assets are generating continuous sandbox interest compound curves. Open PennyOtter to claim or view.`,
+        amount: customAmount,
+        timestamp: new Date().toLocaleTimeString(),
+      });
+      setShowEmailAlertMockToast(true);
+    }
   };
 
   const triggerManualAdjustAlert = () => {
@@ -965,7 +1022,7 @@ export default function App() {
             </div>
             <div>
               <h1 className="font-extrabold text-sm leading-tight tracking-tight text-white font-sans">
-                SuiWealth <span className="text-blue-400 font-mono font-bold text-xs">/ PayStream</span>
+                PennyOtter <span className="text-blue-400 font-mono font-bold text-xs">/ PayStream</span>
               </h1>
               <p className="text-[10px] text-slate-400 uppercase tracking-widest font-mono font-bold">
                 Programmable Financial Autopilot
@@ -1012,7 +1069,7 @@ export default function App() {
         ) : (
           <>
             {/* SUI DEFI AI CO-PILOT PROMPT BANNER */}
-        {currentView === 'hub' && (
+            {currentView === 'hub' && (
           <div className="bg-gradient-to-r from-blue-950/20 via-[#0a142c]/65 to-indigo-950/20 border border-blue-900/30 p-4 rounded-3xl flex flex-col md:flex-row items-center justify-between gap-4 shadow-md relative overflow-hidden">
             <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 rounded-full blur-xl" />
             <div className="flex items-center gap-3 relative z-10 text-left">
@@ -1033,6 +1090,92 @@ export default function App() {
               <Sparkles className="w-3.5 h-3.5 animate-pulse" />
               <span>Ask AI Advisor</span>
             </button>
+          </div>
+        )}
+
+        {/* SANDBOX SIMULATOR & NOTIFICATION INTEGRATIONS */}
+        {currentView === 'hub' && (
+          <div id="sandbox-simulator-settings" className="bg-[#080d19] border border-slate-800/80 rounded-3xl p-5 shadow-md relative overflow-hidden text-left">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full blur-2xl pointer-events-none" />
+            
+            <div className="flex items-center gap-2 text-white font-bold text-xs font-sans mb-4 border-b border-slate-800/70 pb-3 uppercase tracking-wider">
+              <Mail className="w-4 h-4 text-blue-400" />
+              <span>Sandbox Simulator & Mock Email Alert Integrations</span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              {/* Left Column: Email Notification Preferences */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <label className="text-xs font-extrabold text-slate-200 flex items-center gap-1.5 cursor-pointer" htmlFor="email-notifications-toggle">
+                      <span>Enable Real-Time Email Alerts</span>
+                    </label>
+                    <p className="text-[10px] text-slate-400 font-medium leading-normal">
+                      Get mock email alerts with atomic PTB log breakdowns when PennyOtter intercepts incoming payments.
+                    </p>
+                  </div>
+                  <input
+                    type="checkbox"
+                    id="email-notifications-toggle"
+                    checked={emailAlertsEnabled}
+                    onChange={(e) => setEmailAlertsEnabled(e.target.checked)}
+                    className="w-4 h-4 rounded text-blue-600 bg-slate-950 border-slate-800 focus:ring-blue-500 cursor-pointer"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="block text-[10px] text-slate-400 font-sans uppercase font-bold">Simulator Target Email Address</label>
+                  <input
+                    type="email"
+                    disabled={!emailAlertsEnabled}
+                    placeholder="e.g. ayobamioketona@gmail.com"
+                    value={userEmailAddress}
+                    onChange={(e) => setUserEmailAddress(e.target.value)}
+                    className={`w-full text-xs px-3 py-2 rounded-xl border focus:outline-none transition-all ${
+                      emailAlertsEnabled
+                        ? "bg-[#111a30] border-slate-800 text-white focus:border-blue-500 font-mono"
+                        : "bg-slate-900/50 border-slate-800/40 text-slate-500 cursor-not-allowed font-mono"
+                    }`}
+                  />
+                </div>
+              </div>
+
+              {/* Right Column: Generate Simulated Inflow block */}
+              <div className="space-y-3.5 bg-[#0c1428] p-4 rounded-2xl border border-slate-800/80">
+                <div>
+                  <h4 className="text-xs font-bold text-slate-200 font-sans flex items-center gap-1.5 uppercase tracking-wider">
+                    <Sparkles className="w-3.5 h-3.5 text-blue-400" />
+                    <span>Interactive PayStream Sandbox Faucet</span>
+                  </h4>
+                  <p className="text-[10px] text-slate-400 mt-0.5 leading-normal font-sans">
+                    Trigger a simulated incoming transfer block into PennyOtter to audit dynamic ratio routing rules in action and preview notifications!
+                  </p>
+                </div>
+
+                <div className="flex gap-2.5 items-center">
+                  <div className="relative flex-1">
+                    <input
+                      type="number"
+                      step="any"
+                      value={faucetAmountSim}
+                      onChange={(e) => setFaucetAmountSim(e.target.value)}
+                      placeholder="SUI Amt"
+                      className="w-full bg-[#111a30] text-xs px-3 py-2 rounded-xl pr-8 border border-slate-800 text-white font-mono focus:outline-none focus:border-blue-500 font-bold"
+                    />
+                    <span className="absolute top-1/2 right-3 -translate-y-1/2 text-[9px] font-bold text-slate-500 font-mono">SUI</span>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={generateSimulatedIncomingTransfer}
+                    className="bg-blue-600 hover:bg-blue-500 active:scale-95 text-white font-extrabold text-xs px-4 py-2 rounded-xl transition-all shadow-md shadow-blue-500/10 cursor-pointer border-none"
+                  >
+                    Simulate Payment
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         )}
 
@@ -1364,7 +1507,7 @@ export default function App() {
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row justify-between items-center gap-4">
           <div className="flex items-center gap-2">
             <Coins className="w-4 h-4 text-slate-500" />
-            <span className="font-bold text-slate-600 font-sans">SuiWealth (oWealth Sandbox Engine)</span>
+            <span className="font-bold text-slate-600 font-sans">PennyOtter (oWealth Sandbox Engine)</span>
           </div>
 
           <div className="text-slate-500 font-medium font-mono text-xs">
@@ -1378,7 +1521,70 @@ export default function App() {
       </footer>
 
       {/* Float Toasts for instant user response validation */}
-      <div className="fixed bottom-4 right-4 z-50 space-y-2">
+      <div className="fixed bottom-4 right-4 z-50 space-y-4 flex flex-col items-end">
+        {/* Real-time Email Alert Mock Simulation Toast */}
+        <AnimatePresence>
+          {showEmailAlertMockToast && emailMockDetails && (
+            <motion.div
+              id="simulated-email-toast"
+              initial={{ opacity: 0, y: 30, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 20, scale: 0.95 }}
+              className="bg-[#0b1329] border-2 border-blue-500 rounded-2xl p-4.5 shadow-[0_12px_40px_rgba(0,0,0,0.65)] w-80 md:w-96 text-left relative overflow-hidden text-slate-100 border-solid"
+            >
+              <div className="absolute top-0 left-0 w-1.5 h-full bg-blue-500" />
+              
+              <div className="flex justify-between items-start mb-2">
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 bg-blue-950 text-blue-400 rounded-lg border border-blue-900/40">
+                    <Mail className="w-4 h-4 text-blue-400" />
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-mono font-black text-blue-400 uppercase tracking-wider">Simulated Inbound Email</span>
+                    <span className="text-[9px] text-slate-500 block">Sent via PennyOtter Mail Engine</span>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowEmailAlertMockToast(false)}
+                  className="p-1 hover:bg-[#121c38] rounded-lg text-slate-400 hover:text-white transition-all border-none bg-transparent cursor-pointer"
+                >
+                  <span className="font-extrabold text-xs">✕</span>
+                </button>
+              </div>
+
+              <div className="h-[1px] bg-slate-800/60 my-2" />
+
+              <div className="space-y-1.5 text-xs">
+                <div>
+                  <span className="text-slate-500 font-extrabold uppercase text-[9px]">To:</span>{' '}
+                  <span className="text-slate-200 font-mono font-medium select-all">{emailMockDetails.to}</span>
+                </div>
+                <div>
+                  <span className="text-slate-500 font-extrabold uppercase text-[9px]">Subject:</span>{' '}
+                  <span className="text-white font-bold select-all">{emailMockDetails.subject}</span>
+                </div>
+                <div className="mt-2 text-[11px] text-slate-300 font-mono bg-[#070b16] border border-slate-800/70 p-3 rounded-lg overflow-y-auto max-h-48 whitespace-pre-line leading-relaxed scrollbar-thin select-all">
+                  {emailMockDetails.body}
+                </div>
+              </div>
+
+              <div className="mt-3 flex justify-between items-center bg-blue-950/20 px-2 py-1 rounded-lg border border-blue-900/10">
+                <span className="text-[10px] text-blue-400 font-semibold flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-ping" />
+                  Email Simulated
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setShowEmailAlertMockToast(false)}
+                  className="text-[10px] bg-blue-600 hover:bg-blue-500 text-white font-extrabold px-2.5 py-1 rounded-md transition-all border-none cursor-pointer"
+                >
+                  Confirm Read
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {successToast && (
           <motion.div
             id="toast-success-primary"

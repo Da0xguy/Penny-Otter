@@ -389,7 +389,7 @@ export default function FixedDeposits({
                         onClick={() => {
                           if (!mature) {
                             const confirm = window.confirm(
-                              `SuiWealth Early Release Protocol:\n\n` +
+                              `PennyOtter Early Release Protocol:\n\n` +
                               `Locked Capital: ${formatSui(plan.amountSui)} SUI\n` +
                               `Compounded Yield so far: +${formatSui(accruedYield, 6)} SUI\n` +
                               `Administrative Exit Fee (2%): -${formatSui(penaltyFee, 6)} SUI\n` +

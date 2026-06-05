@@ -69,8 +69,8 @@ export default function LandingPage() {
 
   const faqs = [
     {
-      q: "What is SuiWealth and how does the PayStream technology work?",
-      a: "SuiWealth is a programmable non-custodial asset routing manager built for the Sui network. It employs PayStream, an autonomous splitting mechanism that triggers upon receiving any transaction block. Rather than manually dispersing funds, the app intercepts inflows and instantly disperses them across liquid accounts, flexible oWealth yield vaults, and lockup contracts in a single operation."
+      q: "What is PennyOtter and how does the PayStream technology work?",
+      a: "PennyOtter is a programmable non-custodial asset routing manager built for the Sui network. It employs PayStream, an autonomous splitting mechanism that triggers upon receiving any transaction block. Rather than manually dispersing funds, the app intercepts inflows and instantly disperses them across liquid accounts, flexible oWealth yield vaults, and lockup contracts in a single operation."
     },
     {
       q: "How are yields generated in the oWealth Flexible and Fixed Lockers?",
@@ -78,15 +78,15 @@ export default function LandingPage() {
     },
     {
       q: "What visual speed controls does the sandbox offer?",
-      a: "SuiWealth integrates a dual-mode engine: standard live-on-chain tracking, alongside an accelerated sandbox simulation. By switching the Yield Sandbox multiplier from 1x up to 100x or 1,000x, you can compress days of real-time compounding interest into seconds right on your screen to audit and visualize compound curves before locking real currency."
+      a: "PennyOtter integrates a dual-mode engine: standard live-on-chain tracking, alongside an accelerated sandbox simulation. By switching the Yield Sandbox multiplier from 1x up to 100x or 1,000x, you can compress days of real-time compounding interest into seconds right on your screen to audit and visualize compound curves before locking real currency."
     },
     {
       q: "Are the lockers locked forever? How are early withdrawals handled?",
       a: "Your savings targets and flexible oWealth profiles are instantly fluid, available for claim at any point in time. Fixed Lockers are meant for committed terms; however, a built-in early-liquidation mechanism enforces a 25% early withdrawal penalty on the principal, protecting pool liquidity while returning remaining assets instantly to your liquid spending balance in emergencies."
     },
     {
-      q: "Why does SuiWealth utilize single Programmable Transaction Blocks (PTB)?",
-      a: "Sui's unique runtime allows developers to bundle multiple instructions (splitting coins, transferring objects, triggering move-module entry calls) into a single atomic executive. SuiWealth executes its routing rules using PTB logic, meaning that no matter how complex your split configuration looks, it signs. This ensures minimal gas usage and guarantees either all actions execute successfully or the state rolls back cleanly with absolute transaction integrity."
+      q: "Why does PennyOtter utilize single Programmable Transaction Blocks (PTB)?",
+      a: "Sui's unique runtime allows developers to bundle multiple instructions (splitting coins, transferring objects, triggering move-module entry calls) into a single atomic executive. PennyOtter executes its routing rules using PTB logic, meaning that no matter how complex your split configuration looks, it signs. This ensures minimal gas usage and guarantees either all actions execute successfully or the state rolls back cleanly with absolute transaction integrity."
     }
   ];
 
@@ -127,7 +127,7 @@ export default function LandingPage() {
           transition={{ delay: 0.2 }}
           className="text-slate-350 text-slate-300 font-medium text-sm md:text-base mt-6 max-w-2xl mx-auto leading-relaxed"
         >
-          SuiWealth automatically splits, routes, and stakes incoming transactions using native Programmable Transaction Blocks (PTB). Connect your SUI wallet to access premium AI budgeting tools, Flexible yield pools, and Fixed savers.
+          PennyOtter automatically splits, routes, and stakes incoming transactions using native Programmable Transaction Blocks (PTB). Connect your SUI wallet to access premium AI budgeting tools, Flexible yield pools, and Fixed savers.
         </motion.p>
 
         {/* CONNECT WALLET CALL TO ACTION */}
@@ -238,7 +238,7 @@ export default function LandingPage() {
                 <span>Auto-Routing Custom Splits</span>
               </h3>
               <p className="text-xs text-slate-400 leading-relaxed font-semibold">
-                SuiWealth decomposes every incoming stream block. Choose a routing template to preview the automatic PTB allocation logic:
+                PennyOtter decomposes every incoming stream block. Choose a routing template to preview the automatic PTB allocation logic:
               </p>
             </div>
 
@@ -628,7 +628,7 @@ export default function LandingPage() {
             Frequently Asked Questions
           </h3>
           <p className="text-xs text-slate-400 font-semibold">
-            Everything you need to know about the SuiWealth non-custodial sandbox environment.
+            Everything you need to know about the PennyOtter non-custodial sandbox environment.
           </p>
         </div>
 
