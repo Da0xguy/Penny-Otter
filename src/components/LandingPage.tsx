@@ -22,7 +22,11 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
-export default function LandingPage() {
+interface LandingPageProps {
+  onBypass?: () => void;
+}
+
+export default function LandingPage({ onBypass }: LandingPageProps = {}) {
   // 1. Live Compounding Yield Simulator State
   const [simulatedAccrued, setSimulatedAccrued] = useState(0.00000000);
   const [fiatEquivalent, setFiatEquivalent] = useState(0.00);
@@ -94,7 +98,7 @@ export default function LandingPage() {
     <div className="space-y-16 py-4">
       
       {/* HERO SECTION WITH INTEGRATED WALLET CONNECT AND DYNAMIC BLUR EFFECTS */}
-      <section className="relative px-4 py-16 md:py-24 rounded-3xl overflow-hidden bg-gradient-to-b from-[#0b1329] via-[#050914] to-[#030712] border border-blue-950/40 text-center">
+      <section className="relative px-4 py-16 md:py-24 rounded-3xl overflow-hidden bg-gradient-to-b from-[#0c0c0e] via-[#050506] to-[#010101] border border-white/[0.06] text-center">
         {/* Abstract futuristic glowing shapes in background */}
         <div className="absolute top-0 left-1/4 w-80 h-80 bg-blue-600/10 rounded-full blur-[120px] pointer-events-none" />
         <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-indigo-500/10 rounded-full blur-[140px] pointer-events-none" />
@@ -103,7 +107,7 @@ export default function LandingPage() {
         <motion.div 
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="inline-flex items-center gap-2 px-3 py-1 bg-blue-950/80 border border-blue-900/60 rounded-full text-[11px] font-bold text-blue-400 font-sans tracking-wide mb-6 uppercase shadow-sm shadow-blue-500/5"
+          className="inline-flex items-center gap-2 px-3 py-1 bg-zinc-950/90 border border-zinc-850 rounded-full text-[11px] font-bold text-slate-300 font-sans tracking-wide mb-6 uppercase shadow-sm"
         >
           <Sparkles className="w-3.5 h-3.5 text-blue-400 animate-pulse" />
           <span>Sui Programmable Finance Engine &bull; Secure V2.1 Sandbox</span>
@@ -135,7 +139,7 @@ export default function LandingPage() {
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: 0.3 }}
-          className="mt-10 max-w-md mx-auto p-6 bg-[#090f23]/90 border border-blue-800/20 rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] backdrop-blur-md relative z-10"
+          className="mt-10 max-w-md mx-auto p-6 bg-black/85 border border-white/[0.08] rounded-3xl shadow-[0_25px_60px_rgba(0,0,0,0.9)] backdrop-blur-xl relative z-10"
         >
           <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-blue-500/30 to-transparent" />
           
@@ -155,6 +159,20 @@ export default function LandingPage() {
               />
             </div>
 
+            {onBypass && (
+              <div className="pt-2 border-t border-slate-800/60 mt-4 flex flex-col items-center gap-2">
+                <span className="text-[9px] text-slate-500 font-bold uppercase tracking-widest font-mono">Or test in sandbox mode</span>
+                <button
+                  type="button"
+                  id="btn-bypass-wallet"
+                  onClick={onBypass}
+                  className="w-full text-xs font-bold text-slate-200 hover:text-white bg-blue-950/45 hover:bg-blue-900/30 border border-blue-900/20 hover:border-blue-850 rounded-xl py-2.5 transition-all text-center cursor-pointer font-sans"
+                >
+                  Proceed as Sandbox Guest ➔
+                </button>
+              </div>
+            )}
+
             <p className="text-[10px] text-slate-500 font-medium flex items-center justify-center gap-1.5 pt-1">
               <ShieldCheck className="w-3.5 h-3.5 text-blue-500" />
               <span>Non-custodial. Audited, secure, on-chain execution sandboxing.</span>
@@ -167,7 +185,7 @@ export default function LandingPage() {
       <section className="grid grid-cols-1 md:grid-cols-2 gap-6 px-1">
         
         {/* LIVE YIELD TICKER DEMO CARD */}
-        <div className="bg-[#080d19] border border-slate-800/80 p-6 rounded-3xl flex flex-col justify-between shadow-lg relative overflow-hidden">
+        <div className="bg-black/75 border border-white/[0.08] p-6 rounded-3xl flex flex-col justify-between shadow-lg relative overflow-hidden backdrop-blur-xl">
           <div className="absolute top-0 right-0 w-24 h-24 bg-green-500/5 rounded-full blur-xl pointer-events-none" />
           
           <div className="space-y-4">
@@ -192,7 +210,7 @@ export default function LandingPage() {
             </div>
 
             {/* Numeric Accruing Area */}
-            <div className="p-5 bg-slate-900/40 border border-slate-800/30 rounded-2xl text-center space-y-2.5">
+            <div className="p-5 bg-zinc-950/45 border border-zinc-900 rounded-2xl text-center space-y-2.5">
               <span className="text-[10px] uppercase font-mono font-bold text-slate-500 tracking-wider">
                 Simulated Interest Gained (1,000 SUI Base)
               </span>
@@ -219,7 +237,7 @@ export default function LandingPage() {
         </div>
 
         {/* INTERACTIVE PAYSTREAM AUTOROUTING SANDBOX */}
-        <div className="bg-[#080d19] border border-slate-800/80 p-6 rounded-3xl flex flex-col justify-between shadow-lg relative overflow-hidden">
+        <div className="bg-black/75 border border-white/[0.08] p-6 rounded-3xl flex flex-col justify-between shadow-lg relative overflow-hidden backdrop-blur-xl">
           <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/5 rounded-full blur-xl pointer-events-none" />
           
           <div className="space-y-4">
@@ -243,7 +261,7 @@ export default function LandingPage() {
             </div>
 
             {/* Slider Switcher */}
-            <div className="grid grid-cols-3 gap-1.5 p-1 bg-slate-900/80 rounded-xl border border-slate-800">
+            <div className="grid grid-cols-3 gap-1.5 p-1 bg-zinc-950/90 rounded-xl border border-zinc-900">
               <button
                 type="button"
                 onClick={() => setSelectedRoutePreset('balanced')}
@@ -280,7 +298,7 @@ export default function LandingPage() {
             </div>
 
             {/* Split visualization bars */}
-            <div className="p-4 bg-slate-900/30 border border-slate-800/30 rounded-2xl space-y-3.5">
+            <div className="p-4 bg-zinc-950/20 border border-zinc-900/40 rounded-2xl space-y-3.5">
               <p className="text-[11px] text-slate-400 text-left leading-relaxed font-semibold italic min-h-[36px]">
                 "{routeDetails.description}"
               </p>
@@ -339,7 +357,7 @@ export default function LandingPage() {
       </section>
 
       {/* APY PROJECTIONS CALCULATOR SECTION */}
-      <section className="bg-gradient-to-br from-[#070b15] to-[#04070e] border border-slate-800/70 p-6 md:p-8 rounded-3xl shadow-xl relative">
+      <section className="bg-gradient-to-br from-[#0c0c0e] to-[#040405] border border-white/[0.06] p-6 md:p-8 rounded-3xl shadow-xl relative">
         <div className="absolute top-0 right-0 w-45 h-45 bg-blue-500/5 rounded-full blur-3xl pointer-events-none" />
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -425,7 +443,7 @@ export default function LandingPage() {
           <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-4">
             
             {/* oWealth Flex Pool */}
-            <div className="bg-[#090f23]/60 border border-slate-850 border-slate-800/40 p-4 rounded-2xl flex flex-col justify-between text-left shadow-sm">
+            <div className="bg-black/45 border border-zinc-800/60 p-4 rounded-2xl flex flex-col justify-between text-left shadow-sm">
               <div>
                 <div className="flex items-center gap-1.5 text-green-400 mb-1.5">
                   <Percent className="w-4 h-4" />
@@ -451,7 +469,7 @@ export default function LandingPage() {
             </div>
 
             {/* 90 Days Locker */}
-            <div className="bg-[#090f23]/60 border border-slate-850 border-slate-800/40 p-4 rounded-2xl flex flex-col justify-between text-left shadow-sm">
+            <div className="bg-black/45 border border-zinc-800/60 p-4 rounded-2xl flex flex-col justify-between text-left shadow-sm">
               <div>
                 <div className="flex items-center gap-1.5 text-blue-400 mb-1.5">
                   <Lock className="w-4 h-4" />
@@ -477,7 +495,7 @@ export default function LandingPage() {
             </div>
 
             {/* 360 Days Locker */}
-            <div className="bg-[#090f23]/60 border border-blue-900/30 p-4 rounded-2xl flex flex-col justify-between text-left shadow-lg relative overflow-hidden">
+            <div className="bg-black/55 border border-zinc-800 p-4 rounded-2xl flex flex-col justify-between text-left shadow-lg relative overflow-hidden">
               <div className="absolute top-0 right-0 bg-blue-600/10 text-blue-400 uppercase font-mono text-[8px] font-black px-2 py-0.5 rounded-bl-xl tracking-wider">
                 MAX VALUE
               </div>
@@ -512,7 +530,7 @@ export default function LandingPage() {
       </section>
 
       {/* DEEP INTEGRATION TECHNICAL SPOTLIGHT - SUI PROGRAMMABLE TRANSACTION BLOCKS */}
-      <section className="bg-[#040710]/40 border border-slate-800/40 p-6 md:p-8 rounded-3xl relative overflow-hidden text-left">
+      <section className="bg-black/40 border border-zinc-900/50 p-6 md:p-8 rounded-3xl relative overflow-hidden text-left">
         <div className="absolute -bottom-24 -right-24 w-60 h-60 bg-blue-600/5 rounded-full blur-2xl pointer-events-none" />
         
         <div className="flex flex-col lg:flex-row gap-8 items-center">
@@ -546,7 +564,7 @@ export default function LandingPage() {
             </ul>
           </div>
 
-          <div className="flex-1 w-full p-4.5 bg-[#03060c] border border-[#1b2b45] rounded-2xl shadow-inner font-mono text-[10px] text-slate-400 space-y-2 select-all max-h-[195px] overflow-y-auto">
+          <div className="flex-1 w-full p-4.5 bg-zinc-950/80 border border-zinc-900 rounded-2xl shadow-inner font-mono text-[10px] text-slate-400 space-y-2 select-all max-h-[195px] overflow-y-auto">
             <span className="text-[9px] text-[#aaaccc] font-extrabold uppercase tracking-widest block border-b border-[#1b2b45] pb-1.5 mb-1.5">
               Atomic Routing Decompiled Execution Block (PTB Mock)
             </span>
@@ -578,7 +596,7 @@ export default function LandingPage() {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           
-          <div className="bg-[#080d19]/40 border border-slate-800/40 p-5 rounded-2xl text-left space-y-3">
+          <div className="bg-zinc-950/45 border border-zinc-900 p-5 rounded-2xl text-left space-y-3">
             <div className="w-8 h-8 rounded-full bg-blue-600/20 text-blue-400 flex items-center justify-center font-mono font-black text-xs">
               01
             </div>
@@ -588,7 +606,7 @@ export default function LandingPage() {
             </p>
           </div>
 
-          <div className="bg-[#080d19]/40 border border-slate-800/40 p-5 rounded-2xl text-left space-y-3">
+          <div className="bg-zinc-950/45 border border-zinc-900 p-5 rounded-2xl text-left space-y-3">
             <div className="w-8 h-8 rounded-full bg-blue-600/20 text-blue-400 flex items-center justify-center font-mono font-black text-xs">
               02
             </div>
@@ -598,7 +616,7 @@ export default function LandingPage() {
             </p>
           </div>
 
-          <div className="bg-[#080d19]/40 border border-slate-800/40 p-5 rounded-2xl text-left space-y-3">
+          <div className="bg-zinc-950/45 border border-zinc-900 p-5 rounded-2xl text-left space-y-3">
             <div className="w-8 h-8 rounded-full bg-blue-600/20 text-blue-400 flex items-center justify-center font-mono font-black text-xs">
               03
             </div>
@@ -608,7 +626,7 @@ export default function LandingPage() {
             </p>
           </div>
 
-          <div className="bg-[#080d19]/40 border border-slate-800/40 p-5 rounded-2xl text-left space-y-3">
+          <div className="bg-zinc-950/45 border border-zinc-900 p-5 rounded-2xl text-left space-y-3">
             <div className="w-8 h-8 rounded-full bg-blue-600/20 text-blue-400 flex items-center justify-center font-mono font-black text-xs">
               04
             </div>
@@ -632,7 +650,7 @@ export default function LandingPage() {
           </p>
         </div>
 
-        <div className="border border-slate-800/60 rounded-3xl divide-y divide-slate-850 overflow-hidden bg-[#070b14]/50">
+        <div className="border border-zinc-900 rounded-3xl overflow-hidden bg-black/40">
           
           {faqs.map((faq, index) => {
             const isOpen = faqOpenIndex === index;
@@ -658,7 +676,7 @@ export default function LandingPage() {
                       animate={{ height: "auto", opacity: 1 }}
                       exit={{ height: 0, opacity: 0 }}
                       transition={{ duration: 0.25 }}
-                      className="overflow-hidden bg-[#0a1122]/30"
+                      className="overflow-hidden bg-black/10"
                     >
                       <div className="p-6 text-slate-350 text-slate-300 text-xs leading-relaxed font-semibold border-t border-slate-850 text-left">
                         {faq.a}

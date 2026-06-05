@@ -199,7 +199,7 @@ export default function AiAdvisor({ userPortfolio, onBack, onApplyRatio, onReall
             initial={{ opacity: 0, x: -15 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.1, duration: 0.4 }}
-            className="bg-[#080d19] border border-slate-800/80 p-5 rounded-3xl shadow-lg relative overflow-hidden"
+            className="bg-black/60 border border-zinc-900 p-5 rounded-3xl shadow-lg relative overflow-hidden"
           >
             <div className="absolute -top-12 -left-12 w-32 h-32 bg-blue-500/5 rounded-full blur-2xl pointer-events-none" />
             
@@ -251,7 +251,7 @@ export default function AiAdvisor({ userPortfolio, onBack, onApplyRatio, onReall
             initial={{ opacity: 0, x: -15 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.15, duration: 0.4 }}
-            className="bg-[#0c1428] p-4.5 rounded-2xl border border-slate-850 space-y-3"
+            className="bg-zinc-950/40 p-4.5 rounded-2xl border border-zinc-900 space-y-3"
           >
             <div className="text-[11px] text-slate-400 leading-normal flex gap-2">
               <Info className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
@@ -279,7 +279,7 @@ export default function AiAdvisor({ userPortfolio, onBack, onApplyRatio, onReall
                     animate={{ height: "auto", opacity: 1 }}
                     exit={{ height: 0, opacity: 0 }}
                     transition={{ duration: 0.3 }}
-                    className="mt-2.5 p-3 bg-[#080d19]/80 rounded-lg text-[9px] font-mono text-zinc-300 border border-slate-800 overflow-x-auto max-h-[220px]"
+                    className="mt-2.5 p-3 bg-black/60 rounded-lg text-[9px] font-mono text-zinc-350 border border-zinc-900 overflow-x-auto max-h-[220px]"
                   >
                     <span className="text-zinc-500 block mb-1 font-semibold">// SUIWealth smart contract (move/suiwealth/sources/suiwealth.move)</span>
                     <pre>{moveContractCode}</pre>
@@ -301,7 +301,7 @@ export default function AiAdvisor({ userPortfolio, onBack, onApplyRatio, onReall
                 initial={{ opacity: 0, y: 15 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -15 }}
-                className="bg-[#030712] border border-dashed border-slate-800 rounded-3xl p-10 text-center text-slate-400 flex flex-col items-center justify-center min-h-[360px]"
+                className="glass-panel border-dashed rounded-3xl p-10 text-center text-slate-400 flex flex-col items-center justify-center min-h-[360px]"
               >
                 <div className="bg-blue-950/30 border border-blue-900/30 p-4 rounded-full mb-4">
                   <Brain className="w-10 h-10 text-blue-400 animate-pulse" />
@@ -329,7 +329,7 @@ export default function AiAdvisor({ userPortfolio, onBack, onApplyRatio, onReall
                 initial={{ opacity: 0, scale: 0.98 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.98 }}
-                className="bg-[#080d19] border border-slate-800 rounded-3xl p-10 text-center text-slate-400 flex flex-col items-center justify-center min-h-[360px] relative overflow-hidden"
+                className="glass-panel rounded-3xl p-10 text-center text-slate-400 flex flex-col items-center justify-center min-h-[360px] relative overflow-hidden"
               >
                 <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-500 animate-pulse" />
                 
@@ -389,7 +389,7 @@ export default function AiAdvisor({ userPortfolio, onBack, onApplyRatio, onReall
                 className="space-y-6"
               >
                 {/* Risk and Exec summary block */}
-                <div className="bg-[#080d19] border border-slate-800 p-6 rounded-3xl relative overflow-hidden">
+                <div className="glass-panel p-6 rounded-3xl relative overflow-hidden">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4 border-b border-slate-850 pb-4">
                     <div>
                       <h3 className="text-white font-bold text-sm flex items-center gap-1.5">
@@ -522,7 +522,7 @@ export default function AiAdvisor({ userPortfolio, onBack, onApplyRatio, onReall
                             onClick={() => onApplyRatio(policy)}
                             whileHover={{ scale: 1.03 }}
                             whileTap={{ scale: 0.97 }}
-                            className="w-full text-center py-2 text-[9px] font-extrabold bg-[#101b34] hover:bg-[#152549] text-blue-300 hover:text-white border border-[#213867]/50 rounded-lg shadow-sm transition-all flex items-center justify-center gap-1 cursor-pointer"
+                            className="w-full text-center py-2 text-[9px] font-extrabold bg-zinc-900 hover:bg-zinc-800 text-blue-400 hover:text-white border border-zinc-800 rounded-lg shadow-sm transition-all flex items-center justify-center gap-1 cursor-pointer"
                           >
                             <Zap className="w-3 h-3 text-blue-300 shrink-0" />
                             <span>Set Auto-Router Policy</span>
@@ -534,7 +534,7 @@ export default function AiAdvisor({ userPortfolio, onBack, onApplyRatio, onReall
                 </div>
 
                 {/* Market Insights block with search highlights */}
-                <div className="bg-[#0c1428] border border-slate-800/80 rounded-2xl p-5">
+                <div className="bg-black/40 border border-zinc-900 rounded-2xl p-5">
                   <div className="flex items-center gap-1.5 mb-3.5 pb-2 border-b border-slate-800/65">
                     <Flame className="w-4.5 h-4.5 text-amber-500 animate-pulse animate-bounce" />
                     <h4 className="text-[11px] font-extrabold text-slate-305 text-slate-300 uppercase tracking-wider">

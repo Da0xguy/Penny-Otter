@@ -80,7 +80,7 @@ export default function TargetSavings({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
-      className="bg-[#080d19] border border-slate-800/80 rounded-3xl p-6 shadow-lg relative overflow-hidden"
+      className="glass-panel rounded-3xl p-6 shadow-2xl relative overflow-hidden"
     >
       <div className="absolute -top-12 -left-12 w-32 h-32 bg-blue-500/10 rounded-full blur-2xl pointer-events-none" />
 
@@ -94,7 +94,7 @@ export default function TargetSavings({
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           onClick={() => setShowAddForm(!showAddForm)}
-          className="flex items-center gap-1.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-500 px-3.5 py-2 rounded-xl transition-all shadow-sm cursor-pointer"
+          className="flex items-center gap-1.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-500 px-3.5 py-2 rounded-xl transition-all shadow-md cursor-pointer border-none"
         >
           <PlusCircle className="w-3.5 h-3.5" />
           <span>New Goal</span>
@@ -128,7 +128,7 @@ export default function TargetSavings({
             animate={{ opacity: 1, height: "auto", marginBottom: 24 }}
             exit={{ opacity: 0, height: 0, marginBottom: 0 }}
             transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-            className="bg-[#0c1428] p-4.5 border border-slate-800 rounded-2xl overflow-hidden space-y-4"
+            className="bg-white/[0.02] p-4.5 border border-white/5 rounded-2xl overflow-hidden space-y-4"
           >
             <h4 className="text-xs font-bold text-slate-200 flex items-center gap-1.5 uppercase tracking-wide font-sans">
               <Milestone className="w-3.5 h-3.5 text-blue-400" />
@@ -145,7 +145,7 @@ export default function TargetSavings({
                   placeholder="e.g. Rent, Phone, Laptop"
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
-                  className="w-full bg-[#111a30] border border-slate-800 rounded-lg px-3 py-2 text-white text-xs font-sans placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                  className="w-full glass-input rounded-lg px-3 py-2 text-white text-xs font-sans placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-500/20"
                 />
               </div>
 
@@ -160,7 +160,7 @@ export default function TargetSavings({
                   placeholder="e.g. 500 SUI"
                   value={newTarget}
                   onChange={(e) => setNewTarget(e.target.value)}
-                  className="w-full bg-[#111a30] border border-slate-800 rounded-lg px-3 py-2 text-white text-xs font-mono placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                  className="w-full glass-input rounded-lg px-3 py-2 text-white text-xs font-mono placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-500/20"
                 />
               </div>
 
@@ -171,7 +171,7 @@ export default function TargetSavings({
                     id="target-duration-select"
                     value={newMonths}
                     onChange={(e) => setNewMonths(e.target.value)}
-                    className="w-full bg-[#111a30] border border-slate-800 rounded-lg pl-3 pr-8 py-2 text-white text-xs focus:outline-none focus:border-blue-500 cursor-pointer appearance-none"
+                    className="w-full glass-input rounded-lg pl-3 pr-8 py-2 text-white text-xs focus:outline-none cursor-pointer appearance-none"
                   >
                     <option value="1">1 Month (Immediate)</option>
                     <option value="3">3 Months</option>
@@ -232,7 +232,7 @@ export default function TargetSavings({
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.95 }}
                   transition={{ duration: 0.3 }}
-                  className="bg-[#090f1f]/80 border border-slate-800/60 rounded-2xl p-4.5 flex flex-col justify-between hover:bg-[#0c1428]/80 hover:border-slate-800 transition-all shadow-md group"
+                  className="bg-black/65 border border-white/[0.08] rounded-2xl p-4.5 flex flex-col justify-between hover:bg-zinc-950/80 hover:border-zinc-800 transition-all shadow-md group"
                 >
                   <div>
                     <div className="flex items-start justify-between gap-2 border-b border-slate-800 pb-2">
@@ -261,7 +261,7 @@ export default function TargetSavings({
                         <span className="font-sans font-semibold text-[10px] text-slate-450">{progressPct}% Completed</span>
                         <span className="font-bold text-white text-[11px]">{formatSui(plan.currentAmountSui, 1)} / {formatSui(plan.targetAmountSui, 1)}</span>
                       </div>
-                      <div className="w-full bg-[#111a30] h-2 rounded-full overflow-hidden border border-slate-805 border-slate-800">
+                      <div className="w-full bg-zinc-950 h-2 rounded-full overflow-hidden border border-zinc-900">
                         <motion.div
                           initial={{ width: 0 }}
                           animate={{ width: `${progressPct}%` }}
@@ -295,7 +295,7 @@ export default function TargetSavings({
                               placeholder="Amount SUI"
                               value={depositAmount}
                               onChange={(e) => setDepositAmount(e.target.value)}
-                              className="flex-1 bg-[#111a30] border border-slate-800 rounded px-2.5 py-1.5 text-xs text-white font-mono focus:outline-none focus:border-blue-500"
+                              className="flex-1 bg-zinc-950 border border-zinc-900 rounded px-2.5 py-1.5 text-xs text-white font-mono focus:outline-none focus:border-blue-500"
                             />
                             <motion.button
                               type="button"
@@ -332,7 +332,7 @@ export default function TargetSavings({
                               setDepositPlanId(plan.id);
                               setDepositAmount('');
                             }}
-                            className="flex-1 py-1.5 text-[10px] bg-[#0c1428] text-slate-300 hover:bg-[#121d37] hover:text-white rounded-xl font-bold font-sans transition-all border border-slate-800 shadow-sm cursor-pointer"
+                            className="flex-1 py-1.5 text-[10px] bg-zinc-900/40 text-slate-300 hover:bg-zinc-800/80 hover:text-white rounded-xl font-bold font-sans transition-all border border-zinc-850 shadow-sm cursor-pointer"
                           >
                             Add Funds
                           </motion.button>
@@ -346,7 +346,7 @@ export default function TargetSavings({
                             className={`flex-1 py-1.5 text-[10px] rounded-xl font-bold font-sans transition-all shadow-sm cursor-pointer ${
                               plan.isUnlocked || progressPct >= 100
                                 ? 'bg-green-600 text-white hover:bg-green-550'
-                                : 'bg-[#111a30] text-slate-600 border border-slate-850/60 cursor-not-allowed opacity-50'
+                                : 'bg-zinc-950 text-slate-600 border border-zinc-900 cursor-not-allowed opacity-50'
                             }`}
                             disabled={!plan.isUnlocked && progressPct < 100}
                           >

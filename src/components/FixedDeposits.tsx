@@ -71,7 +71,7 @@ export default function FixedDeposits({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
-      className="bg-[#080d19] border border-slate-800/80 rounded-3xl p-6 shadow-lg relative overflow-hidden text-left"
+      className="glass-panel rounded-3xl p-6 shadow-2xl relative overflow-hidden text-left"
     >
       <div className="absolute -bottom-12 -right-12 w-32 h-32 bg-blue-500/10 rounded-full blur-2xl pointer-events-none" />
 
@@ -85,7 +85,7 @@ export default function FixedDeposits({
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           onClick={() => setShowForm(!showForm)}
-          className="flex items-center gap-1.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-500 px-3.5 py-2 rounded-xl transition-all shadow-sm cursor-pointer border-none"
+          className="flex items-center gap-1.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-500 px-3.5 py-2 rounded-xl transition-all shadow-md cursor-pointer border-none"
         >
           <Plus className="w-3.5 h-3.5" />
           <span>New Fixed Deposit</span>
@@ -102,7 +102,7 @@ export default function FixedDeposits({
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
-            className="mb-4 text-xs bg-rose-950/20 border border-rose-900/40 text-rose-405 text-rose-400 p-3 rounded-xl"
+            className="mb-4 text-xs bg-rose-950/20 border border-rose-900/40 text-rose-455 text-rose-400 p-3 rounded-xl"
           >
             {errorMsg}
           </motion.div>
@@ -119,7 +119,7 @@ export default function FixedDeposits({
             animate={{ opacity: 1, height: "auto", marginBottom: 24 }}
             exit={{ opacity: 0, height: 0, marginBottom: 0 }}
             transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-            className="bg-[#0c1428] p-4.5 border border-slate-800 rounded-2xl overflow-hidden space-y-4 text-left"
+            className="bg-white/[0.02] p-4.5 border border-white/5 rounded-2xl overflow-hidden space-y-4 text-left"
           >
             <h4 className="text-xs font-bold text-slate-200 uppercase tracking-wider font-sans flex items-center gap-1.5">
               <PiggyBank className="w-4 h-4 text-blue-400" />
@@ -138,7 +138,7 @@ export default function FixedDeposits({
                     placeholder="e.g. 100"
                     value={amountInput}
                     onChange={(e) => setAmountInput(e.target.value)}
-                    className="w-full bg-[#111a30] border border-slate-800 rounded-lg px-3 py-2 text-white text-xs font-mono placeholder-slate-500 focus:outline-none focus:border-blue-500 font-medium"
+                    className="w-full glass-input rounded-lg px-3 py-2 text-white text-xs font-mono placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-500/20 font-medium"
                   />
                   <span className="absolute top-1/2 right-3 -translate-y-1/2 text-[10px] font-bold text-slate-500 font-sans">SUI</span>
                 </div>
@@ -150,7 +150,7 @@ export default function FixedDeposits({
                       key={preset}
                       type="button"
                       onClick={() => setAmountInput(preset.toString())}
-                      className="px-2.5 py-1 bg-slate-900 hover:bg-slate-850 text-[10px] text-slate-350 font-mono font-bold rounded-lg border border-slate-800 hover:text-white transition-all cursor-pointer whitespace-nowrap"
+                      className="px-2.5 py-1 bg-white/5 hover:bg-white/10 text-[10px] text-slate-350 font-mono font-bold rounded-lg border border-white/5 hover:text-white transition-all cursor-pointer whitespace-nowrap"
                     >
                       {preset} SUI
                     </button>
@@ -158,7 +158,7 @@ export default function FixedDeposits({
                   <button
                     type="button"
                     onClick={() => setAmountInput(spendingBalance.toFixed(2))}
-                    className="px-2.5 py-1 bg-blue-950/40 text-[10px] text-blue-400 font-sans font-extrabold rounded-lg border border-blue-900/30 hover:bg-blue-900/40 hover:text-white transition-all cursor-pointer whitespace-nowrap"
+                    className="px-2.5 py-1 bg-blue-500/10 text-[10px] text-blue-400 font-sans font-extrabold rounded-lg border border-blue-500/20 hover:bg-blue-500/20 hover:text-white transition-all cursor-pointer whitespace-nowrap"
                   >
                     Max
                   </button>
@@ -171,7 +171,7 @@ export default function FixedDeposits({
                   id="fixed-duration-select"
                   value={duration}
                   onChange={(e) => setDuration(parseInt(e.target.value))}
-                  className="w-full bg-[#111a30] border border-slate-800 rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-blue-500 cursor-pointer font-medium"
+                  className="w-full glass-input rounded-lg px-3 py-2 text-white text-xs focus:outline-none cursor-pointer font-medium"
                 >
                   <option value={30}>30 Days (7% APY yield)</option>
                   <option value={90}>90 Days (10% APY yield)</option>
@@ -263,11 +263,11 @@ export default function FixedDeposits({
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.95 }}
                   transition={{ duration: 0.3, ease: 'easeOut' }}
-                  className="bg-[#090f1f]/80 border border-slate-800/60 rounded-2xl p-4.5 flex flex-col gap-4 transition-all hover:bg-[#0c1428]/80 hover:border-slate-800 text-left"
+                  className="bg-black/65 border border-white/[0.08] rounded-2xl p-4.5 flex flex-col gap-4 transition-all hover:bg-zinc-950/80 hover:border-zinc-800 text-left"
                 >
                   <div className="flex flex-col md:flex-row justify-between md:items-start gap-4">
                     <div className="flex items-start gap-3.5">
-                      <div className="p-2.5 bg-blue-950/30 border border-blue-900/40 rounded-xl text-blue-300 flex-shrink-0 flex items-center justify-center">
+                      <div className="p-2.5 bg-zinc-950 border border-zinc-900 rounded-xl text-blue-300 flex-shrink-0 flex items-center justify-center">
                         <Timer className="w-5 h-5 text-blue-400" />
                       </div>
                       <div>
@@ -278,9 +278,9 @@ export default function FixedDeposits({
                         </div>
                         <div className="flex flex-wrap gap-x-2.5 gap-y-1 mt-1 text-[11px] text-slate-450 font-sans font-semibold">
                           <span className="text-blue-400 font-extrabold">{plan.apy}% APY</span>
-                          <span className="text-slate-850 text-slate-700">•</span>
+                          <span className="text-slate-700">•</span>
                           <span>Duration: {plan.durationDays} Days</span>
-                          <span className="text-slate-850 text-slate-700">•</span>
+                          <span className="text-slate-700">•</span>
                           <span>Locked: {new Date(plan.startDate).toLocaleDateString()}</span>
                         </div>
 
@@ -293,7 +293,7 @@ export default function FixedDeposits({
                                 initial={{ opacity: 0, y: -5, height: 0 }}
                                 animate={{ opacity: 1, y: 0, height: "auto" }}
                                 exit={{ opacity: 0, y: -5, height: 0 }}
-                                className="overflow-hidden space-y-2 bg-[#111a30] border border-slate-800 shadow-lg p-3 rounded-xl max-w-sm"
+                                className="overflow-hidden space-y-2 bg-zinc-950 border border-zinc-900 shadow-lg p-3 rounded-xl max-w-sm"
                               >
                                 <label className="block text-[9px] text-slate-400 font-bold uppercase tracking-wider">Top Up Lock Size</label>
                                 <div className="flex items-center gap-1.5 flex-wrap">
@@ -307,7 +307,7 @@ export default function FixedDeposits({
                                       setTopUpAmount(e.target.value);
                                       setTopUpError('');
                                     }}
-                                    className="w-28 bg-[#080d19] border border-slate-800 rounded-lg px-2.5 py-1 text-white text-xs font-mono focus:outline-none focus:border-blue-500 font-medium"
+                                    className="w-28 bg-black/60 border border-zinc-900 rounded-lg px-2.5 py-1 text-white text-xs font-mono focus:outline-none focus:border-blue-500 font-medium"
                                   />
                                   <motion.button
                                     type="button"

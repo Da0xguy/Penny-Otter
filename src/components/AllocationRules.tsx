@@ -92,12 +92,12 @@ export default function AllocationRules({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-      className="bg-[#080d19] border border-slate-800/80 rounded-3xl p-6 shadow-lg relative overflow-hidden"
+      className="glass-panel rounded-3xl p-6 shadow-2xl relative overflow-hidden"
     >
       {/* Premium ambient light decoration */}
       <div className="absolute -top-12 -right-12 w-32 h-32 bg-blue-500/10 rounded-full blur-2xl pointer-events-none" />
 
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 border-b border-slate-800/50 pb-5">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 border-b border-white/5 pb-5">
         <div>
           <div className="flex items-center gap-2 text-white font-bold text-lg font-sans">
             <Layers className="w-5 h-5 text-blue-400" />
@@ -108,7 +108,7 @@ export default function AllocationRules({
           </p>
         </div>
         
-        <div className="bg-blue-950/40 border border-blue-900/40 px-3 py-1 rounded-full text-[10px] font-bold text-blue-300 tracking-wide uppercase font-mono">
+        <div className="bg-blue-950/40 border border-blue-500/20 px-3 py-10 px-3 py-1 rounded-full text-[10px] font-bold text-blue-300 tracking-wide uppercase font-mono backdrop-blur-md">
           Ratio Mode Active
         </div>
       </div>
@@ -145,14 +145,14 @@ export default function AllocationRules({
                 onClick={() => setRoutingRatioPolicy(policy)}
                 className={`p-4 rounded-2xl text-left border relative cursor-pointer overflow-hidden transition-all duration-300 ${
                   isSelected
-                    ? 'border-blue-500 bg-blue-950/20 shadow-[0_0_20px_rgba(37,99,235,0.1)]'
-                    : 'border-slate-800/80 bg-[#0c1428] hover:bg-[#121c38] text-slate-100'
+                    ? 'border-blue-500 bg-blue-950/25 shadow-[0_0_20px_rgba(37,99,235,0.15)]'
+                    : 'border-white/5 bg-white/[0.02] hover:bg-white/[0.05] text-slate-100'
                 }`}
               >
                 {isSelected && (
                   <motion.div 
                     layoutId="activePolicyAccent" 
-                    className="absolute inset-0 border-2 border-blue-500/20 rounded-2xl pointer-events-none" 
+                    className="absolute inset-0 border border-blue-500/30 rounded-2xl pointer-events-none" 
                     transition={{ type: "spring", stiffness: 300, damping: 30 }}
                   />
                 )}
@@ -179,10 +179,10 @@ export default function AllocationRules({
       </div>
 
       {/* SECTION 2: CONFIGURE THE ACTIVE AUTOMATED DESTINATIONS (EXCLUDE FIXED ACCORDING TO USER DIRECTIVE) */}
-      <div className="mb-6 bg-[#0c1428] border border-slate-800/80 rounded-2xl p-4.5">
+      <div className="mb-6 bg-white/[0.01] border border-white/5 rounded-2xl p-4.5">
         <h4 className="text-xs font-extrabold text-slate-300 uppercase tracking-wider mb-3.5 flex items-center justify-between font-sans">
           <span>2. Toggled Active Savings Destinations</span>
-          <span className="text-[10px] lowercase bg-slate-900 text-slate-400 border border-slate-800 font-sans px-2.5 py-0.5 rounded font-bold">
+          <span className="text-[10px] lowercase bg-black/20 text-slate-400 border border-white/5 font-sans px-2.5 py-0.5 rounded font-bold">
             splits split equally among active goals
           </span>
         </h4>
@@ -193,8 +193,8 @@ export default function AllocationRules({
             whileHover={{ scale: 1.01 }}
             className={`flex items-start md:items-center justify-between gap-4 p-3.5 rounded-xl border transition-all ${
               isDestActive('flexible') 
-                ? 'bg-blue-950/10 border-blue-900/30' 
-                : 'bg-[#080d19]/80 border-slate-800/60'
+                ? 'bg-blue-500/[0.05] border-blue-500/20' 
+                : 'bg-white/[0.01] border-white/5'
             }`}
           >
             <div className="flex items-start gap-3">
@@ -203,7 +203,7 @@ export default function AllocationRules({
                 id="toggle-flex"
                 checked={isDestActive('flexible')}
                 onChange={() => handleToggleDest('flexible')}
-                className="w-4 h-4 mt-0.5 md:mt-0 text-blue-500 bg-slate-950 border-slate-800 rounded focus:ring-blue-500 focus:ring-offset-[#030712] cursor-pointer"
+                className="w-4 h-4 mt-0.5 md:mt-0 text-blue-500 bg-slate-950 border-slate-850 rounded focus:ring-blue-500 focus:ring-offset-[#030712] cursor-pointer"
               />
               <div>
                 <label htmlFor="toggle-flex" className="text-xs font-bold text-slate-200 cursor-pointer block">
@@ -231,8 +231,8 @@ export default function AllocationRules({
             layout="position"
             className={`flex flex-col p-3.5 rounded-xl border transition-all ${
               isDestActive('target') 
-                ? 'bg-blue-950/10 border-blue-900/30' 
-                : 'bg-[#080d19]/80 border-slate-800/60'
+                ? 'bg-blue-500/[0.05] border-blue-500/20' 
+                : 'bg-white/[0.01] border-white/5'
             }`}
           >
             <div className="flex items-start md:items-center justify-between gap-4">
@@ -242,7 +242,7 @@ export default function AllocationRules({
                   id="toggle-target"
                   checked={isDestActive('target')}
                   onChange={() => handleToggleDest('target')}
-                  className="w-4 h-4 mt-0.5 md:mt-0 text-blue-500 bg-slate-950 border-slate-800 rounded focus:ring-blue-500 focus:ring-offset-[#030712] cursor-pointer"
+                  className="w-4 h-4 mt-0.5 md:mt-0 text-blue-500 bg-slate-950 border-slate-850 rounded focus:ring-blue-500 focus:ring-offset-[#030712] cursor-pointer"
                 />
                 <div>
                   <label htmlFor="toggle-target" className="text-xs font-bold text-slate-200 cursor-pointer block">
@@ -257,7 +257,7 @@ export default function AllocationRules({
                     initial={{ opacity: 0, scale: 0.8 }}
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.8 }}
-                    className="text-[10px] font-mono font-bold bg-green-950/45 text-green-400 px-2.5 py-0.5 border border-green-900/40 rounded flex-shrink-0"
+                    className="text-[10px] font-mono font-bold bg-green-950/20 text-green-400 px-2.5 py-0.5 border border-green-500/20 rounded flex-shrink-0"
                   >
                     ACTIVE RE-ROUTE
                   </motion.span>
@@ -272,7 +272,7 @@ export default function AllocationRules({
                   animate={{ height: "auto", opacity: 1, marginTop: 12 }}
                   exit={{ height: 0, opacity: 0, marginTop: 0 }}
                   transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-                  className="overflow-hidden border-t border-slate-800/60 pt-3 flex items-center gap-3"
+                  className="overflow-hidden border-t border-white/5 pt-3 flex items-center gap-3"
                 >
                   <label htmlFor="target-goal-selector" className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wide flex items-center gap-1">
                     <Target className="w-3.5 h-3.5 text-blue-400" />
@@ -283,11 +283,11 @@ export default function AllocationRules({
                       id="target-goal-selector"
                       value={rules.find(r => r.destination === 'target')?.targetGoalId || ''}
                       onChange={(e) => handleSelectTarget(e.target.value)}
-                      className="bg-[#121c35] text-xs text-slate-200 rounded-lg border border-slate-855 border-slate-800 outline-none pl-2.5 pr-8 py-1.5 focus:ring-1 focus:ring-blue-500 font-medium cursor-pointer appearance-none"
+                      className="glass-input text-xs text-slate-200 rounded-lg outline-none pl-2.5 pr-8 py-1.5 font-medium cursor-pointer appearance-none"
                     >
-                      <option value="" className="bg-[#121c35]">Select Target Plan</option>
+                      <option value="" className="bg-[#0b101c]">Select Target Plan</option>
                       {targets.map(t => (
-                        <option key={t.id} value={t.id} className="bg-[#121c35]">{t.name} (Goal: {t.targetAmountSui} SUI)</option>
+                        <option key={t.id} value={t.id} className="bg-[#0b101c]">{t.name} (Goal: {t.targetAmountSui} SUI)</option>
                       ))}
                     </select>
                     <ChevronDown className="w-3 h-3 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -307,7 +307,7 @@ export default function AllocationRules({
       </div>
 
       {/* SECTION 3: RE-CONFIGURED SPEND & SAVE ENGINE (NO PERCENTAGES!) */}
-      <div className="p-4.5 bg-blue-950/10 border border-blue-900/30 rounded-2xl relative">
+      <div className="p-4.5 bg-blue-500/[0.04] border border-blue-500/10 rounded-2xl relative">
         <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
           <div className="flex items-start gap-3">
             <input
@@ -315,7 +315,7 @@ export default function AllocationRules({
               id="spend-save-toggle"
               checked={spendAndSaveEnabled}
               onChange={(e) => setSpendAndSaveEnabled(e.target.checked)}
-              className="w-4 h-4 mt-1 text-blue-500 bg-slate-950 border-slate-800 rounded focus:ring-blue-500 focus:ring-offset-[#030712] cursor-pointer"
+              className="w-4 h-4 mt-1 text-blue-500 bg-[#080d19] border border-white/10 rounded focus:ring-blue-500 focus:ring-offset-slate-950 cursor-pointer"
             />
             <div>
               <label htmlFor="spend-save-toggle" className="text-sm font-extrabold text-white cursor-pointer flex items-center gap-1.5">
@@ -336,13 +336,13 @@ export default function AllocationRules({
               animate={{ height: "auto", opacity: 1, marginTop: 16 }}
               exit={{ height: 0, opacity: 0, marginTop: 0 }}
               transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-              className="overflow-hidden pt-3.5 border-t border-blue-900/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs"
+              className="overflow-hidden pt-3.5 border-t border-blue-500/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs"
             >
               <span className="font-extrabold text-[#94a3b8] uppercase text-[10px] tracking-wide flex items-center gap-1">
                 <Sparkles className="w-3.5 h-3.5 text-amber-400" />
                 <span>Selected Autopilot Save Multiplier:</span>
               </span>
-              <div className="flex bg-[#0a0f1d] rounded-lg p-1 border border-slate-800">
+              <div className="flex bg-black/25 rounded-lg p-1 border border-white/5">
                 {([100, 150, 200] as const).map((ratioPct) => {
                   const isActive = spendAndSavePercentage === ratioPct;
                   let multiplierLabel = '1:1 Equal';
@@ -362,10 +362,10 @@ export default function AllocationRules({
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
                       onClick={() => setSpendAndSavePercentage(ratioPct)}
-                      className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all cursor-pointer ${
+                      className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all cursor-pointer border-none bg-transparent ${
                         isActive
                           ? 'bg-blue-600 text-white shadow-sm font-semibold'
-                          : 'text-slate-400 hover:text-white hover:bg-slate-900/60'
+                          : 'text-slate-400 hover:text-white hover:bg-white/5'
                       }`}
                     >
                       {multiplierLabel}
@@ -379,7 +379,7 @@ export default function AllocationRules({
       </div>
 
       {/* SUMMARY DISPLAY OF ACTIVE RATIO ALLOCATION */}
-      <div className="mt-5 p-3 flex justify-between bg-slate-950/40 border border-slate-800 rounded-xl text-xs font-sans text-slate-400 font-semibold gap-2 flex-wrap">
+      <div className="mt-5 p-3 flex justify-between bg-black/20 border border-white/5 rounded-xl text-xs font-sans text-slate-400 font-semibold gap-2 flex-wrap">
         <span>Current Active Auto-Router Split Style:</span>
         <span className="text-blue-400 font-bold font-mono">
           Spending: {currentPolicy.spend} / Savings: {currentPolicy.save} (

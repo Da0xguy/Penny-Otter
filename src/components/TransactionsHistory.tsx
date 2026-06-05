@@ -163,15 +163,15 @@ export default function TransactionsHistory({ transactions, onClearHistory }: Tr
   const chartData = prepareChartData();
 
   return (
-    <div id="transactions-history-panel" className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm relative overflow-hidden">
+    <div id="transactions-history-panel" className="glass-panel rounded-3xl p-6 shadow-2xl relative overflow-hidden">
       {/* Structural layout: Top Controls Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 border-b border-slate-100 pb-5">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 border-b border-white/5 pb-5">
         <div>
-          <h3 className="text-slate-900 font-bold text-base font-sans flex items-center gap-2">
-            <ListFilter className="w-5 h-5 text-blue-600" />
+          <h3 className="text-white font-bold text-base font-sans flex items-center gap-2">
+            <ListFilter className="w-5 h-5 text-blue-400" />
             <span>Consolidated Flow Ledger</span>
           </h3>
-          <p className="text-xs text-slate-500 font-sans mt-0.5 font-medium">
+          <p className="text-xs text-slate-400 font-sans mt-0.5 font-medium">
             Real-time audit trailing of inbound streams, active savings transfers, and capital claims.
           </p>
         </div>
@@ -181,54 +181,46 @@ export default function TransactionsHistory({ transactions, onClearHistory }: Tr
             id="history-filter-select"
             value={filterType}
             onChange={(e) => setFilterType(e.target.value)}
-            className="bg-slate-50 text-xs text-slate-700 font-semibold rounded-xl border border-slate-200 px-3 py-1.5 focus:outline-none focus:border-blue-500 shadow-sm transition-all active:scale-[0.98]"
+            className="glass-input text-xs text-white font-semibold rounded-xl px-3 py-1.5 focus:outline-none shadow-sm transition-all active:scale-[0.98] cursor-pointer appearance-none"
           >
-            <option value="all">All Flows</option>
-            <option value="incoming">Incoming Funds</option>
-            <option value="saving">Automated Saves</option>
-            <option value="withdraw">Locker Claims</option>
+            <option value="all" className="bg-[#0b1120]">All Flows</option>
+            <option value="incoming" className="bg-[#0b1120]">Incoming Funds</option>
+            <option value="saving" className="bg-[#0b1120]">Automated Saves</option>
+            <option value="withdraw" className="bg-[#0b1120]">Locker Claims</option>
           </select>
-
-          <button
-            id="clear-history-btn"
-            onClick={onClearHistory}
-            className="text-[10px] font-bold text-rose-600 bg-rose-50 hover:bg-rose-100/70 border border-rose-200/60 px-3 py-1.5 rounded-xl transition-all shadow-sm active:scale-[0.98]"
-          >
-            Clear History
-          </button>
         </div>
       </div>
 
       {/* 30-Day Flow Trend Line/Area Chart */}
-      <div id="transactions-flow-chart" className="bg-slate-50/50 border border-slate-100 rounded-2xl p-4 mb-6">
+      <div id="transactions-flow-chart" className="bg-white/[0.01] border border-white/5 rounded-2xl p-4 mb-6">
         <div className="flex items-center justify-between flex-wrap gap-2 mb-4">
           <div>
-            <h4 className="text-[11px] font-bold text-slate-700 uppercase tracking-wider">
+            <h4 className="text-[11px] font-bold text-slate-205 text-slate-300 uppercase tracking-wider">
               30-Day Capital Position Trend
             </h4>
-            <p className="text-[10px] text-slate-450 text-slate-500 font-medium font-sans">
+            <p className="text-[10px] text-slate-450 text-slate-400 font-medium font-sans">
               {chartMode === 'cumulative' 
                 ? 'Overview of running wallet balance changes (SUI) over time' 
                 : 'Net daily inflow / outflow balance adjustments'}
             </p>
           </div>
-          <div className="flex items-center gap-1 bg-white border border-slate-200 p-0.5 rounded-lg shadow-sm">
+          <div className="flex items-center gap-1 bg-zinc-950 border border-zinc-900 p-0.5 rounded-lg shadow-md">
             <button
               onClick={() => setChartMode('cumulative')}
-              className={`text-[9px] font-bold px-2 py-0.5 rounded transition-all ${
+              className={`text-[9px] font-bold px-2 py-0.5 rounded transition-all cursor-pointer border-none bg-transparent ${
                 chartMode === 'cumulative'
-                  ? 'bg-blue-50 text-blue-600 shadow-sm'
-                  : 'text-slate-500 hover:text-slate-800'
+                  ? 'bg-blue-600 text-white shadow-sm font-semibold'
+                  : 'text-slate-400 hover:text-white'
               }`}
             >
               Cumulative Flow
             </button>
             <button
               onClick={() => setChartMode('daily')}
-              className={`text-[9px] font-bold px-2 py-0.5 rounded transition-all ${
+              className={`text-[9px] font-bold px-2 py-0.5 rounded transition-all cursor-pointer border-none bg-transparent ${
                 chartMode === 'daily'
-                  ? 'bg-blue-50 text-blue-600 shadow-sm'
-                  : 'text-slate-500 hover:text-slate-800'
+                  ? 'bg-blue-600 text-white shadow-sm font-semibold'
+                  : 'text-slate-400 hover:text-white'
               }`}
             >
               Daily Net
@@ -245,19 +237,19 @@ export default function TransactionsHistory({ transactions, onClearHistory }: Tr
                   <stop offset="95%" stopColor="#2563eb" stopOpacity={0.005}/>
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" opacity={0.6} />
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" opacity={0.4} />
               <XAxis 
                 dataKey="formattedDate" 
                 tickLine={false} 
                 axisLine={false}
-                stroke="#94a3b8" 
+                stroke="#64748b" 
                 fontSize={8}
                 dy={3}
               />
               <YAxis 
                 tickLine={false} 
                 axisLine={false}
-                stroke="#94a3b8" 
+                stroke="#64748b" 
                 fontSize={8}
                 dx={-3}
               />
@@ -266,11 +258,11 @@ export default function TransactionsHistory({ transactions, onClearHistory }: Tr
                   if (active && payload && payload.length) {
                     const data = payload[0].payload;
                     return (
-                      <div className="bg-white border border-slate-200 rounded-xl p-2 shadow-md font-sans">
-                        <p className="text-[9px] font-bold text-slate-400 mb-0.5">{data.date}</p>
-                        <p className="text-[11px] font-bold text-slate-800 flex items-center justify-between gap-3">
+                      <div className="bg-zinc-950/95 border border-zinc-800 rounded-xl p-2 shadow-xl font-sans text-slate-200">
+                        <p className="text-[9px] font-bold text-slate-500 mb-0.5">{data.date}</p>
+                        <p className="text-[11px] font-bold text-slate-200 flex items-center justify-between gap-3">
                           <span>{chartMode === 'cumulative' ? 'Cumulative Flow:' : 'Net Adjust:'}</span>
-                          <span className={payload[0].value >= 0 ? 'text-green-600 font-extrabold' : 'text-rose-600 font-extrabold'}>
+                          <span className={payload[0].value >= 0 ? 'text-green-450 text-green-400 font-extrabold' : 'text-rose-455 text-rose-450 text-rose-400 font-extrabold'}>
                             {payload[0].value >= 0 ? '+' : ''}{payload[0].value} SUI
                           </span>
                         </p>
@@ -295,7 +287,7 @@ export default function TransactionsHistory({ transactions, onClearHistory }: Tr
 
       {/* Structured Table Headings for Desktop */}
       {filteredTxs.length > 0 && (
-        <div className="hidden md:grid grid-cols-12 gap-4 pb-2 px-4 text-[10px] uppercase font-bold tracking-wider text-slate-400 font-sans border-b border-slate-100 mb-3">
+        <div className="hidden md:grid grid-cols-12 gap-4 pb-2 px-4 text-[10px] uppercase font-bold tracking-wider text-slate-400 font-sans border-b border-white/5 mb-3">
           <div className="col-span-3">Timestamp & Date</div>
           <div className="col-span-5">Activity Category</div>
           <div className="col-span-2 text-center">Status</div>
@@ -313,10 +305,10 @@ export default function TransactionsHistory({ transactions, onClearHistory }: Tr
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -12 }}
               transition={{ duration: 0.25, ease: 'easeOut' }}
-              className="text-center py-12 border border-dashed border-slate-200 rounded-2xl bg-slate-50/50 text-slate-400 font-sans"
+              className="text-center py-12 border border-dashed border-white/5 rounded-2xl bg-white/[0.01] text-slate-400 font-sans"
             >
-              <Calendar className="w-8 h-8 text-slate-300 mx-auto mb-2" />
-              <p className="text-sm font-semibold text-slate-600">No matching stream records found.</p>
+              <Calendar className="w-8 h-8 text-slate-500 mx-auto mb-2" />
+              <p className="text-sm font-semibold text-slate-300">No matching stream records found.</p>
               <p className="text-xs text-slate-500 mt-1 font-sans">Trigger simulated transactions or claim gas funds to begin!</p>
             </motion.div>
           ) : (
@@ -332,7 +324,7 @@ export default function TransactionsHistory({ transactions, onClearHistory }: Tr
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -15 }}
                   transition={{ duration: 0.28, ease: 'easeInOut' }}
-                  className="bg-slate-50/60 border border-slate-100 rounded-2xl md:rounded-xl overflow-hidden transition-all hover:bg-slate-100/50 hover:border-slate-200/80 shadow-sm p-4 md:p-3"
+                  className="bg-white/[0.01] border border-white/5 rounded-2xl md:rounded-xl overflow-hidden transition-all hover:bg-white/[0.04] hover:border-white/10 shadow-md p-4 md:p-3"
                 >
                   <div className="flex flex-col md:grid md:grid-cols-12 gap-3.5 md:items-center">
                     
@@ -340,46 +332,46 @@ export default function TransactionsHistory({ transactions, onClearHistory }: Tr
                     <div className="col-span-3 flex items-center gap-3">
                       <div className={`p-1.5 rounded-lg flex-shrink-0 border ${
                         isCredit
-                          ? 'bg-green-50 text-green-600 border-green-150'
-                          : 'bg-rose-50 text-rose-600 border-rose-150'
+                          ? 'bg-green-500/10 text-green-400 border-green-500/20'
+                          : 'bg-rose-500/10 text-rose-455 text-rose-400 border-rose-500/20'
                       }`}>
                         {isCredit ? <ArrowDown className="w-3.5 h-3.5" /> : <ArrowUp className="w-3.5 h-3.5" />}
                       </div>
                       <div className="flex flex-col">
-                        <span className="text-[11px] text-slate-500 font-mono font-medium">
+                        <span className="text-[11px] text-slate-400 font-mono font-medium">
                           {formatDate(tx.timestamp)}
                         </span>
-                        <span className="text-[9px] text-slate-400 font-sans font-semibold uppercase tracking-wider md:hidden mt-0.5">
-                          Type: <span className={isCredit ? 'text-green-600' : 'text-rose-600'}>{isCredit ? 'Received' : 'Sent'}</span>
+                        <span className="text-[9px] text-slate-500 font-sans font-semibold uppercase tracking-wider md:hidden mt-0.5">
+                          Type: <span className={isCredit ? 'text-green-400' : 'text-rose-405'}>{isCredit ? 'Received' : 'Sent'}</span>
                         </span>
                       </div>
                     </div>
 
                     {/* Column 2: Event name & description (NO code tags!) */}
                     <div className="col-span-5 flex flex-col justify-center font-sans">
-                      <span className="font-bold text-xs text-slate-800">
+                      <span className="font-bold text-xs text-slate-200">
                         {getTransactionLabel(tx.type)}
                       </span>
-                      <p className="text-xs text-slate-600 leading-normal mt-0.5">
+                      <p className="text-xs text-slate-400 leading-normal mt-0.5">
                         {tx.description}
                       </p>
                     </div>
 
                     {/* Column 3: Status Badge */}
-                    <div className="col-span-2 flex items-center md:justify-center justify-between border-t border-slate-100 pt-2.5 md:pt-0 md:border-none">
+                    <div className="col-span-2 flex items-center md:justify-center justify-between border-t border-white/5 pt-2.5 md:pt-0 md:border-none">
                       <span className="text-[10px] text-slate-400 font-sans md:hidden uppercase font-semibold">Status:</span>
-                      <div className="flex items-center gap-1 text-[9px] font-bold bg-green-50 text-green-700 border border-green-200/60 px-2 py-0.5 rounded-full font-sans uppercase">
+                      <div className="flex items-center gap-1 text-[9px] font-bold bg-green-500/10 text-green-400 border border-green-550/20 px-2 py-0.5 rounded-full font-sans uppercase">
                         <CheckCircle2 className="w-2.5 h-2.5 shrink-0" />
                         <span>Verified</span>
                       </div>
                     </div>
 
                     {/* Column 4: Amount SUI */}
-                    <div className="col-span-2 flex justify-between md:justify-end items-center border-t border-slate-100 pt-2.5 md:pt-0 md:border-none font-mono">
+                    <div className="col-span-2 flex justify-between md:justify-end items-center border-t border-white/5 pt-2.5 md:pt-0 md:border-none font-mono">
                       <span className="text-[10px] text-slate-400 font-sans font-medium md:hidden uppercase font-semibold">
                         Net Flow
                       </span>
-                      <span className={`text-xs sm:text-sm font-bold ${isCredit ? 'text-green-600' : 'text-slate-800'}`}>
+                      <span className={`text-xs sm:text-sm font-bold ${isCredit ? 'text-green-400' : 'text-slate-200'}`}>
                         {isCredit ? '+' : '-'}{formatSui(tx.amountSui, 2)}
                       </span>
                     </div>

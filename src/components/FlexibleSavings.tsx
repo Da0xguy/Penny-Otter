@@ -298,18 +298,18 @@ export default function FlexibleSavings({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, delay: 0.05, ease: [0.16, 1, 0.3, 1] }}
-      className="bg-[#080d19] border border-slate-800/80 rounded-3xl p-5 shadow-lg relative overflow-hidden flex flex-col gap-4"
+      className="glass-panel rounded-3xl p-5 shadow-2xl relative overflow-hidden flex flex-col gap-4"
     >
       {/* Aesthetic background halo */}
       <div className="absolute -bottom-16 -left-16 w-32 h-32 bg-green-500/10 rounded-full blur-2xl pointer-events-none" />
       
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800/60 pb-3">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/5 pb-3">
         <div className="flex items-center gap-2 text-white font-bold text-base font-sans">
           <TrendingUp className="w-5 h-5 text-green-400" />
           <span>oWealth Flexible Yield</span>
         </div>
-        <div className="flex items-center gap-1.5 bg-green-950/40 border border-green-900/40 text-green-300 font-mono text-xs px-2.5 py-0.5 rounded-full w-fit">
+        <div className="flex items-center gap-1.5 bg-green-950/20 border border-green-500/20 text-green-300 font-mono text-xs px-2.5 py-0.5 rounded-full w-fit">
           <Sparkles className="w-3.5 h-3.5 text-green-400 animate-spin" style={{ animationDuration: '3s' }} />
           <span className="font-bold">{poolApy}% APY Daily</span>
         </div>
@@ -325,10 +325,10 @@ export default function FlexibleSavings({
             </p>
 
             {/* Central yield trackers */}
-            <div className="grid grid-cols-2 gap-35 grid-cols-2 gap-3.5">
+            <div className="grid grid-cols-2 gap-3.5">
               <motion.div 
                 whileHover={{ scale: 1.02 }}
-                className="bg-[#0c1428] p-3.5 border border-slate-800/50 rounded-2xl flex flex-col justify-between"
+                className="bg-white/[0.02] p-3.5 border border-white/[0.05] rounded-2xl flex flex-col justify-between"
               >
                 <span className="text-[10px] uppercase tracking-wider text-slate-400 font-sans font-extrabold">Flexible Balance</span>
                 <div id="flexible-sui-text" className="text-lg font-extrabold text-white font-mono mt-1 select-all">
@@ -341,10 +341,10 @@ export default function FlexibleSavings({
 
               <motion.div 
                 whileHover={{ scale: 1.02 }}
-                className="bg-green-950/10 p-3.5 border border-green-900/45 rounded-2xl flex flex-col justify-between"
+                className="bg-green-500/[0.04] p-3.5 border border-green-500/20 rounded-2xl flex flex-col justify-between"
               >
                 <span className="text-[10px] uppercase tracking-wider text-green-400 font-sans font-extrabold flex items-center gap-1">
-                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-450 bg-green-400 animate-pulse" />
                   <span>Yield Earned</span>
                 </span>
                 <div id="yield-earned-sui" className="text-lg font-bold text-green-400 font-mono mt-1">
@@ -358,13 +358,13 @@ export default function FlexibleSavings({
           </div>
 
           {/* Action form nested cleanly */}
-          <div className="bg-[#0c1428]/40 border border-[#111a30] p-4 rounded-2xl space-y-3.5">
-            <div className="flex bg-[#0c1428] p-1 rounded-xl border border-slate-800 relative">
+          <div className="bg-white/[0.01] border border-white/5 p-4 rounded-2xl space-y-3.5">
+            <div className="flex bg-black/25 p-1 rounded-xl border border-white/5 relative">
               <button
                 type="button"
                 id="btn-switch-deposit"
                 onClick={() => setActionType('deposit')}
-                className="flex-1 py-1.5 text-xs font-bold rounded-lg transition-all relative z-10 cursor-pointer"
+                className="flex-1 py-1.5 text-xs font-bold rounded-lg transition-all relative z-10 cursor-pointer border-none bg-transparent"
               >
                 <span className={actionType === 'deposit' ? 'text-white font-bold' : 'text-slate-400 hover:text-white'}>Deposit</span>
                 {actionType === 'deposit' && (
@@ -379,7 +379,7 @@ export default function FlexibleSavings({
                 type="button"
                 id="btn-switch-withdraw"
                 onClick={() => setActionType('withdraw')}
-                className="flex-1 py-1.5 text-xs font-bold rounded-lg transition-all relative z-10 cursor-pointer"
+                className="flex-1 py-1.5 text-xs font-bold rounded-lg transition-all relative z-10 cursor-pointer border-none bg-transparent"
               >
                 <span className={actionType === 'withdraw' ? 'text-white font-bold' : 'text-slate-400 hover:text-white'}>Withdraw</span>
                 {actionType === 'withdraw' && (
@@ -402,7 +402,7 @@ export default function FlexibleSavings({
                   placeholder={`Amount (Available: ${actionType === 'deposit' ? spendingBalance.toFixed(2) : flexibleBalance.toFixed(2)} SUI)`}
                   value={amountInput}
                   onChange={(e) => setAmountInput(e.target.value)}
-                  className="w-full bg-[#111a30] border border-slate-800 rounded-xl px-3.5 py-2 text-white text-xs font-mono placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-all pr-12 focus:ring-1 focus:ring-blue-500/20"
+                  className="w-full glass-input rounded-xl px-3.5 py-2 text-white text-xs font-mono placeholder-slate-500 focus:outline-none transition-all pr-12"
                 />
                 <span className="absolute top-1/2 right-3.5 -translate-y-1/2 font-mono text-[10px] font-bold text-slate-500">
                   SUI
@@ -509,7 +509,7 @@ export default function FlexibleSavings({
         </div>
 
         {/* Right section - Compounding chart trends (spanning 5 cols) */}
-        <div className="md:col-span-12 lg:col-span-5 bg-[#0a0f1e]/80 border border-slate-800/80 p-4 rounded-2xl flex flex-col justify-between gap-3 h-full">
+        <div className="md:col-span-12 lg:col-span-5 bg-black/60 border border-zinc-900 p-4 rounded-2xl flex flex-col justify-between gap-3 h-full">
           <div>
             <div className="flex justify-between items-center mb-1">
               <span className="text-[10px] uppercase tracking-wider text-slate-400 font-sans font-extrabold">
@@ -540,7 +540,7 @@ export default function FlexibleSavings({
                   initial={{ opacity: 0, y: 5 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -5 }}
-                  className="flex flex-col gap-1 bg-[#0b1223] border border-slate-800/80 p-2.5 rounded-xl text-[10px] text-slate-300 font-mono transition-all"
+                  className="flex flex-col gap-1 bg-zinc-950 border border-zinc-900 p-2.5 rounded-xl text-[10px] text-slate-300 font-mono transition-all"
                 >
                   <div className="flex justify-between">
                     <span className="text-slate-500 font-sans">Date:</span>
@@ -560,7 +560,7 @@ export default function FlexibleSavings({
                   key="default"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  className="flex flex-col gap-1 bg-[#080d19]/40 border border-[#111a30] p-2.5 rounded-xl text-[10px] text-slate-500 font-mono transition-all select-none"
+                  className="flex flex-col gap-1 bg-black/30 border border-white/5 p-2.5 rounded-xl text-[10px] text-slate-500 font-mono transition-all select-none"
                 >
                   <div className="flex justify-between font-bold">
                     <span className="font-sans">Status:</span>
