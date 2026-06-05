@@ -1,0 +1,6 @@
+{
+  "name": "SuiWealth",
+  "description": "Programmable PayStream on Sui. Dynamically split, save, and invest incoming funds into flexible yield vaults, fixed deposits, and target savings plans automatically.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
