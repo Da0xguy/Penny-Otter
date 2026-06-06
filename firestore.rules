@@ -1,0 +1,103 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 1. Global Default-Deny Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Common Hardened Privilege Helpers
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // 2. Validation Blueprints (The Anti-Update-Gap)
+    function isValidUserProfile(data) {
+      return data.suiAddress is string && data.suiAddress.size() <= 128
+          && data.spendingBalance is number && data.spendingBalance >= 0
+          && data.flexibleBalance is number && data.flexibleBalance >= 0
+          && data.accumulatedYieldSui is number
+          && data.spendAndSaveEnabled is bool;
+    }
+
+    function isValidAllocationRule(data) {
+      return data.id is string && data.id.size() <= 64
+          && data.name is string && data.name.size() <= 100
+          && data.destination is string && data.destination.size() <= 50
+          && data.percentage is number && data.percentage >= 0 && data.percentage <= 100
+          && data.isActive is bool;
+    }
+
+    function isValidTargetSavingsPlan(data) {
+      return data.id is string && data.id.size() <= 64
+          && data.name is string && data.name.size() <= 100
+          && data.targetAmountSui is number && data.targetAmountSui >= 0
+          && data.currentAmountSui is number && data.currentAmountSui >= 0
+          && data.maturityDate is string && data.maturityDate.size() <= 64
+          && data.createdAt is string && data.createdAt.size() <= 64
+          && data.isUnlocked is bool;
+    }
+
+    function isValidFixedDepositPlan(data) {
+      return data.id is string && data.id.size() <= 64
+          && data.amountSui is number && data.amountSui >= 0
+          && data.durationDays is number && data.durationDays >= 0
+          && data.apy is number && data.apy >= 0
+          && data.startDate is string && data.startDate.size() <= 64
+          && data.maturityDate is string && data.maturityDate.size() <= 64
+          && data.isWithdrawn is bool;
+    }
+
+    function isValidHistoricalTransaction(data) {
+      return data.id is string && data.id.size() <= 64
+          && data.txHash is string && data.txHash.size() <= 128
+          && data.type is string && data.type.size() <= 50
+          && data.amountSui is number && data.amountSui >= 0
+          && data.timestamp is string && data.timestamp.size() <= 64
+          && data.description is string && data.description.size() <= 504
+          && data.ptbCommandCount is number
+          && data.ptbSteps is list
+          && data.status is string && data.status.size() <= 30;
+    }
+
+    // 3. User Document and Subcollections mapping
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidUserProfile(request.resource.data);
+      allow update: if isOwner(userId) && isValidUserProfile(request.resource.data);
+      allow delete: if isOwner(userId);
+
+      match /rules/{ruleId} {
+        allow list, get: if isOwner(userId);
+        allow create, update: if isOwner(userId) && isValidId(ruleId) && isValidAllocationRule(request.resource.data);
+        allow delete: if isOwner(userId) && isValidId(ruleId);
+      }
+
+      match /targetPlans/{planId} {
+        allow list, get: if isOwner(userId);
+        allow create, update: if isOwner(userId) && isValidId(planId) && isValidTargetSavingsPlan(request.resource.data);
+        allow delete: if isOwner(userId) && isValidId(planId);
+      }
+
+      match /fixedDeposits/{depositId} {
+        allow list, get: if isOwner(userId);
+        allow create, update: if isOwner(userId) && isValidId(depositId) && isValidFixedDepositPlan(request.resource.data);
+        allow delete: if isOwner(userId) && isValidId(depositId);
+      }
+
+      match /transactions/{txId} {
+        allow list, get: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidId(txId) && isValidHistoricalTransaction(request.resource.data);
+        allow update, delete: if isOwner(userId);
+      }
+    }
+  }
+}

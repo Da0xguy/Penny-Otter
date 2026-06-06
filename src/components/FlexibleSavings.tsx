@@ -41,8 +41,8 @@ export default function FlexibleSavings({
   const [hoveredData, setHoveredData] = useState<any | null>(null);
   const [dimensions, setDimensions] = useState({ width: 300, height: 110 });
 
-  // SUI yields roughly 8.5% APY on oWealth (simulates NAVI/Suilend money market pools)
-  const poolApy = 8.5;
+  // SUI yields roughly 0.001% weekly on oWealth (simulates NAVI/Suilend money market pools)
+  const poolApy = 0.001;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

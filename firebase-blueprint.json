@@ -1,0 +1,199 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile containing core spending balance, flexible balance, yield metrics, and notification preferences.",
+      "type": "object",
+      "properties": {
+        "suiAddress": {
+          "type": "string",
+          "description": "Active connected SUI network address"
+        },
+        "spendingBalance": {
+          "type": "number",
+          "description": "User's liquid spending cash balance"
+        },
+        "flexibleBalance": {
+          "type": "number",
+          "description": "Yield-generating flexible savings balance"
+        },
+        "accumulatedYieldSui": {
+          "type": "number",
+          "description": "Total accrued interest in SUI"
+        },
+        "spendAndSaveEnabled": {
+          "type": "boolean",
+          "description": "Toggle status for automated direct save-as-you-spend splits"
+        },
+        "spendAndSavePercentage": {
+          "type": "number",
+          "description": "Direct savings routing ratio scale"
+        },
+        "routingRatioPolicy": {
+          "type": "string",
+          "description": "Active split ratio policy"
+        },
+        "emailAlertsEnabled": {
+          "type": "boolean",
+          "description": "Dynamic electronic mail settlements notice toggle"
+        },
+        "userEmailAddress": {
+          "type": "string",
+          "description": "Destination address for notifications"
+        }
+      },
+      "required": ["suiAddress", "spendingBalance", "flexibleBalance"]
+    },
+    "AllocationRule": {
+      "title": "AllocationRule",
+      "description": "A dynamic SUI cash direct treasury split rule segment.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "destination": {
+          "type": "string"
+        },
+        "percentage": {
+          "type": "number"
+        },
+        "isActive": {
+          "type": "boolean"
+        },
+        "targetGoalId": {
+          "type": "string"
+        }
+      },
+      "required": ["id", "name", "destination", "percentage", "isActive"]
+    },
+    "TargetSavingsPlan": {
+      "title": "TargetSavingsPlan",
+      "description": "Target-savings micro-plan describing lockbox specifications.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "targetAmountSui": {
+          "type": "number"
+        },
+        "currentAmountSui": {
+          "type": "number"
+        },
+        "maturityDate": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string"
+        },
+        "isUnlocked": {
+          "type": "boolean"
+        }
+      },
+      "required": ["id", "name", "targetAmountSui", "currentAmountSui", "maturityDate", "createdAt", "isUnlocked"]
+    },
+    "FixedDepositPlan": {
+      "title": "FixedDepositPlan",
+      "description": "Locker deposit certificate yielding fixed SUI APY.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "amountSui": {
+          "type": "number"
+        },
+        "durationDays": {
+          "type": "number"
+        },
+        "apy": {
+          "type": "number"
+        },
+        "startDate": {
+          "type": "string"
+        },
+        "maturityDate": {
+          "type": "string"
+        },
+        "isWithdrawn": {
+          "type": "boolean"
+        }
+      },
+      "required": ["id", "amountSui", "durationDays", "apy", "startDate", "maturityDate", "isWithdrawn"]
+    },
+    "HistoricalTransaction": {
+      "title": "HistoricalTransaction",
+      "description": "SUI PTB execution audit trail document.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "txHash": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string"
+        },
+        "amountSui": {
+          "type": "number"
+        },
+        "timestamp": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "ptbCommandCount": {
+          "type": "number"
+        },
+        "ptbSteps": {
+          "type": "array"
+        },
+        "status": {
+          "type": "string"
+        }
+      },
+      "required": ["id", "txHash", "type", "amountSui", "timestamp", "description", "ptbCommandCount", "ptbSteps", "status"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": {
+        "$ref": "#/entities/UserProfile"
+      },
+      "description": "Subscribers profiles including yield and balances tracking."
+    },
+    "/users/{userId}/rules/{ruleId}": {
+      "schema": {
+        "$ref": "#/entities/AllocationRule"
+      },
+      "description": "Allocation splits rule records nested under the user account."
+    },
+    "/users/{userId}/targetPlans/{planId}": {
+      "schema": {
+        "$ref": "#/entities/TargetSavingsPlan"
+      },
+      "description": "Nested save-goal plans structure."
+    },
+    "/users/{userId}/fixedDeposits/{depositId}": {
+      "schema": {
+        "$ref": "#/entities/FixedDepositPlan"
+      },
+      "description": "Fixed period high-yield allocations nested records."
+    },
+    "/users/{userId}/transactions/{txId}": {
+      "schema": {
+        "$ref": "#/entities/HistoricalTransaction"
+      },
+      "description": "Secure programmable transaction blocks events tracking nested under owner."
+    }
+  }
+}

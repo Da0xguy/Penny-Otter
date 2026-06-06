@@ -78,7 +78,7 @@ export default function LandingPage({ onBypass }: LandingPageProps = {}) {
     },
     {
       q: "How are yields generated in the oWealth Flexible and Fixed Lockers?",
-      a: "Yields are derived from algorithmic liquidity provisioning, validators staking commissions, and secure money-markets across the Sui DeFi ecosystem. The Flexible Pool yields a stable 8.5% compounding APY with real-time payout ticking. Fixed Lockers amplify your returns by securing collateral for specified tenures: 30 Days (7% APY), 90 Days (10% APY), 180 Days (14% APY), and up to 360 Days at a premium 20% APY."
+      a: "Yields are derived from algorithmic liquidity provisioning, validators staking commissions, and secure money-markets across the Sui DeFi ecosystem. The Flexible Pool yields a stable 1.2% compounding APY with real-time payout ticking. Fixed Lockers amplify your returns by securing collateral for specified tenures: 30 Days (0.5% APY), 90 Days (0.6% APY), 180 Days (0.65% APY), and up to 360 Days at a premium 0.7% APY."
     },
     {
       q: "What visual speed controls does the sandbox offer?",
@@ -205,7 +205,7 @@ export default function LandingPage({ onBypass }: LandingPageProps = {}) {
                 <span>oWealth Continuous Yield Pool</span>
               </h3>
               <p className="text-xs text-slate-400 leading-relaxed font-semibold">
-                Watch how your assets generate interest continuously. SUI oWealth utilizes multi-pool liquidity mechanisms to distribute steady 8.5% APY payout.
+                Watch how your assets generate interest continuously. SUI oWealth utilizes multi-pool liquidity mechanisms to distribute steady 1.2% APY payout.
               </p>
             </div>
 
@@ -225,7 +225,7 @@ export default function LandingPage({ onBypass }: LandingPageProps = {}) {
 
           <div className="mt-5 text-left border-t border-slate-800/60 pt-3.5 flex justify-between text-[11px] text-slate-500 font-sans">
             <div>
-              Flexible Vault APY: <span className="font-bold text-green-400 block mt-0.5">8.5% Stable</span>
+              Flexible Vault Yield: <span className="font-bold text-green-400 block mt-0.5">0.001% Weekly</span>
             </div>
             <div>
               Compound Interval: <span className="font-bold text-slate-300 block mt-0.5">Every Fraction-Second</span>
@@ -318,7 +318,7 @@ export default function LandingPage({ onBypass }: LandingPageProps = {}) {
                 {/* oWealth Flexible bar */}
                 <div>
                   <div className="flex justify-between items-center text-[10px] font-mono font-bold text-green-400 mb-1">
-                    <span>oWEALTH FLEXIBLE POOL (8.5% APY)</span>
+                    <span>oWEALTH FLEXIBLE POOL (1.2% APY)</span>
                     <span>{routeDetails.flexible}%</span>
                   </div>
                   <div className="w-full bg-slate-800/50 h-2 rounded-full overflow-hidden">
@@ -450,7 +450,7 @@ export default function LandingPage({ onBypass }: LandingPageProps = {}) {
                   <span className="text-xs font-bold font-sans">oWealth Flexible</span>
                 </div>
                 <div className="text-xl font-black text-white font-mono">
-                  8.5% <span className="text-[10px] text-slate-400 font-semibold font-sans">APY</span>
+                  1.2% <span className="text-[10px] text-slate-400 font-semibold font-sans">APY</span>
                 </div>
                 <p className="text-[10px] text-slate-400 mt-1 font-semibold leading-relaxed">
                   Fluid, instant asset availability. Perfect for standard liquidity routines.
@@ -459,11 +459,11 @@ export default function LandingPage({ onBypass }: LandingPageProps = {}) {
 
               <div className="mt-4 pt-3 border-t border-slate-800/40 font-mono text-left">
                 <span className="text-[9px] uppercase font-bold text-slate-500">Projected Yield</span>
-                <div className="text-md text-green-450 text-green-400 font-bold mt-0.5">
-                  +{calculateGain(calculatorAmount, 8.5, calcDurationYears).toFixed(3)} SUI
+                <div className="text-md text-green-455 text-green-400 font-bold mt-0.5">
+                  +{calculateGain(calculatorAmount, 1.2, calcDurationYears).toFixed(3)} SUI
                 </div>
                 <span className="text-[10px] text-slate-400 font-semibold">
-                  Total: {(calculatorAmount + calculateGain(calculatorAmount, 8.5, calcDurationYears)).toFixed(1)} SUI
+                  Total: {(calculatorAmount + calculateGain(calculatorAmount, 1.2, calcDurationYears)).toFixed(1)} SUI
                 </span>
               </div>
             </div>
@@ -476,7 +476,7 @@ export default function LandingPage({ onBypass }: LandingPageProps = {}) {
                   <span className="text-xs font-bold font-sans">Moderate Lock Locker</span>
                 </div>
                 <div className="text-xl font-black text-white font-mono">
-                  10.0% <span className="text-[10px] text-slate-400 font-semibold font-sans">APY</span>
+                  0.6% <span className="text-[10px] text-slate-400 font-semibold font-sans">APY</span>
                 </div>
                 <p className="text-[10px] text-slate-400 mt-1 font-semibold leading-relaxed">
                   Accumulate locked-interest. Released automatically upon term maturity.
@@ -486,10 +486,10 @@ export default function LandingPage({ onBypass }: LandingPageProps = {}) {
               <div className="mt-4 pt-3 border-t border-slate-800/40 font-mono text-left">
                 <span className="text-[9px] uppercase font-bold text-slate-500">Projected Yield</span>
                 <div className="text-md text-blue-400 font-bold mt-0.5">
-                  +{calculateGain(calculatorAmount, 10.0, calcDurationYears).toFixed(3)} SUI
+                  +{calculateGain(calculatorAmount, 0.6, calcDurationYears).toFixed(3)} SUI
                 </div>
                 <span className="text-[10px] text-slate-400 font-semibold">
-                  Total: {(calculatorAmount + calculateGain(calculatorAmount, 10.0, calcDurationYears)).toFixed(1)} SUI
+                  Total: {(calculatorAmount + calculateGain(calculatorAmount, 0.6, calcDurationYears)).toFixed(1)} SUI
                 </span>
               </div>
             </div>
@@ -506,7 +506,7 @@ export default function LandingPage({ onBypass }: LandingPageProps = {}) {
                   <span className="text-xs font-bold font-sans">Peak Alpha Locker</span>
                 </div>
                 <div className="text-xl font-black text-white font-mono">
-                  20.0% <span className="text-[10px] text-slate-400 font-semibold font-sans">APY</span>
+                  0.7% <span className="text-[10px] text-slate-400 font-semibold font-sans">APY</span>
                 </div>
                 <p className="text-[10px] text-slate-400 mt-1 font-semibold leading-relaxed">
                   Maximum growth. Yield coefficients augmented for secure 360-day savers.
@@ -516,10 +516,10 @@ export default function LandingPage({ onBypass }: LandingPageProps = {}) {
               <div className="mt-4 pt-3 border-t border-blue-900/20 font-mono text-left">
                 <span className="text-[9px] uppercase font-bold text-slate-500">Projected Yield</span>
                 <div className="text-md text-indigo-400 font-bold mt-0.5">
-                  +{calculateGain(calculatorAmount, 20.0, calcDurationYears).toFixed(3)} SUI
+                  +{calculateGain(calculatorAmount, 0.7, calcDurationYears).toFixed(3)} SUI
                 </div>
                 <span className="text-[10px] text-slate-400 font-semibold">
-                  Total: {(calculatorAmount + calculateGain(calculatorAmount, 20.0, calcDurationYears)).toFixed(1)} SUI
+                  Total: {(calculatorAmount + calculateGain(calculatorAmount, 0.7, calcDurationYears)).toFixed(1)} SUI
                 </span>
               </div>
             </div>

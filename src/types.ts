@@ -67,3 +67,17 @@ export interface IncomingPaymentAlert {
   message: string;
   isPending: boolean;
 }
+
+export interface OtterInvestment {
+  id: string;
+  protocol: string;
+  amountSui: number;
+  apy: number;
+  profitMade: number;
+  timeRemainingSec: number;
+  totalDurationSec: number;
+  status: 'active' | 'completed';
+  description: string;
+  createdAt: string;
+}
+

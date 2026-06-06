@@ -35,11 +35,11 @@ export default function FixedDeposits({
   // SUI progressive locked multipliers
   const getApyForDuration = (days: number): number => {
     switch (days) {
-      case 30: return 7;
-      case 90: return 10;
-      case 180: return 14;
-      case 360: return 20;
-      default: return 10;
+      case 30: return 0.5;
+      case 90: return 0.6;
+      case 180: return 0.65;
+      case 360: return 0.7;
+      default: return 0.6;
     }
   };
 
@@ -173,10 +173,10 @@ export default function FixedDeposits({
                   onChange={(e) => setDuration(parseInt(e.target.value))}
                   className="w-full glass-input rounded-lg px-3 py-2 text-white text-xs focus:outline-none cursor-pointer font-medium"
                 >
-                  <option value={30}>30 Days (7% APY yield)</option>
-                  <option value={90}>90 Days (10% APY yield)</option>
-                  <option value={180}>180 Days (14% APY yield)</option>
-                  <option value={360}>360 Days (20% APY yield)</option>
+                  <option value={30}>30 Days (0.5% APY yield)</option>
+                  <option value={90}>90 Days (0.6% APY yield)</option>
+                  <option value={180}>180 Days (0.65% APY yield)</option>
+                  <option value={360}>360 Days (0.7% APY yield)</option>
                 </select>
               </div>
             </div>
@@ -390,10 +390,10 @@ export default function FixedDeposits({
                           if (!mature) {
                             const confirm = window.confirm(
                               `PennyOtter Early Release Protocol:\n\n` +
-                              `Locked Capital: ${formatSui(plan.amountSui)} SUI\n` +
-                              `Compounded Yield so far: +${formatSui(accruedYield, 6)} SUI\n` +
-                              `Administrative Exit Fee (2%): -${formatSui(penaltyFee, 6)} SUI\n` +
-                              `Net Cash Out: ${formatSui(earlyWithdrawAmount, 6)} SUI\n\n` +
+                              `Locked Capital: ${formatSui(plan.amountSui)}\n` +
+                              `Compounded Yield so far: +${formatSui(accruedYield, 6)}\n` +
+                              `Administrative Exit Fee (2%): -${formatSui(penaltyFee, 6)}\n` +
+                              `Net Cash Out: ${formatSui(earlyWithdrawAmount, 6)}\n\n` +
                               `Are you sure you want to terminate this active investment early with 2% penalty?`
                             );
                             if (!confirm) return;
@@ -425,25 +425,25 @@ export default function FixedDeposits({
 
                     <div className="flex justify-between">
                       <span>Principal Value:</span>
-                      <span className="text-white font-medium">{formatSui(plan.amountSui)} SUI</span>
+                      <span className="text-white font-medium">{formatSui(plan.amountSui)}</span>
                     </div>
 
                     <div className="flex justify-between text-green-400">
                       <span>Earned Yield (Claimable):</span>
-                      <span className="font-extrabold">+{formatSui(accruedYield, 7)} SUI</span>
+                      <span className="font-extrabold">+{formatSui(accruedYield, 7)}</span>
                     </div>
 
                     {!mature && (
                       <div className="flex justify-between text-red-400 text-[10px]">
                         <span>Premature Terminus Fee (2%):</span>
-                        <span>-{formatSui(penaltyFee, 4)} SUI</span>
+                        <span>-{formatSui(penaltyFee, 4)}</span>
                       </div>
                     )}
 
                     <div className="flex justify-between font-bold text-white border-t border-slate-800/60 pt-1 text-xs">
                       <span>{mature ? 'Claimable Final Output:' : 'Immediate Redeem Value:'}</span>
                       <span className={mature ? 'text-green-400' : 'text-blue-400'}>
-                        {formatSui(Math.max(0, earlyWithdrawAmount), 5)} SUI
+                        {formatSui(Math.max(0, earlyWithdrawAmount), 5)}
                       </span>
                     </div>
                   </div>

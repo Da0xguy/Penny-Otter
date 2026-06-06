@@ -10,7 +10,8 @@ import {
   FixedDepositPlan, 
   WalletState, 
   HistoricalTransaction, 
-  IncomingPaymentAlert 
+  IncomingPaymentAlert,
+  OtterInvestment
 } from './types';
 import { 
   formatSui, 
@@ -52,21 +53,45 @@ import {
   Droplets,
   QrCode,
   Camera,
-  X
+  X,
+  Settings,
+  Briefcase,
+  Bot,
+  Info
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ConnectButton, useCurrentAccount, useSuiClient, useSuiClientQuery, useSignAndExecuteTransaction } from '@mysten/dapp-kit';
 import { Transaction } from '@mysten/sui/transactions';
 import jsQR from 'jsqr';
 
+// ---------------- FIREBASE & CLOUD DATABASE PERSISTENCE SERVICES ----------------
+import { auth } from './firebase';
+import { onAuthStateChanged, User, GoogleAuthProvider, signInWithPopup, signOut } from 'firebase/auth';
+import {
+  getUserProfile,
+  saveUserProfile,
+  getAllocationRules,
+  saveAllocationRule,
+  deleteAllocationRule,
+  getTargetSavingsPlans,
+  saveTargetSavingsPlan,
+  deleteTargetSavingsPlan,
+  getFixedDepositPlans,
+  saveFixedDepositPlan,
+  deleteFixedDepositPlan,
+  getHistoricalTransactions,
+  saveHistoricalTransaction
+} from './firestoreService';
+
 const INITIAL_ADDRESS = '0x3f5c8ca28e9301da01dfb0cb901b028dfac90da01fd8';
 
 const CATEGORIES_CONFIG = [
-  { id: 'flexible', label: 'Flexible Yield', icon: TrendingUp, badge: '7.8% APY' },
-  { id: 'fixed', label: 'Fixed Lockers', icon: Lock, badge: 'UP TO 20%' },
+  { id: 'flexible', label: 'Flexible Yield', icon: TrendingUp, badge: '0.001% WK' },
+  { id: 'fixed', label: 'Fixed Lockers', icon: Lock, badge: 'UP TO 0.7%' },
   { id: 'target', label: 'Target Goals', icon: Target },
   { id: 'rules', label: 'Split Rules', icon: Layers },
-  { id: 'advisor', label: 'AI Copilot', icon: Brain, badge: 'PRO' },
+  { id: 'advisor', label: 'Otter AI', icon: Brain },
+  { id: 'investments', label: 'Current Invests', icon: Briefcase },
   { id: 'ledger', label: 'Flow Ledger', icon: History },
   { id: 'transfer', label: 'Outward Spend', icon: Send }
 ];
@@ -161,7 +186,6 @@ function AnimatedSuiBalance({ value, isVisible, onClick }: { value: number; isVi
       <span className="bg-gradient-to-r from-white to-slate-200 bg-clip-text text-transparent font-sans">
         {formatSui(displayValue, 3)}
       </span>
-      <span className="text-sm font-medium text-slate-400 font-sans">SUI</span>
       
       <AnimatePresence>
         {balanceChange && (
@@ -477,6 +501,158 @@ export default function App() {
 
   const { mutateAsync: signAndExecuteTransaction } = useSignAndExecuteTransaction();
 
+  // Firebase Authentication context & Cloud syncing ready indicators
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [isDbLoading, setIsDbLoading] = useState<boolean>(true);
+  const [isDbLoaded, setIsDbLoaded] = useState<boolean>(false);
+
+  // Listen to Google/Firebase authentication state
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        setCurrentUser(user);
+      } else {
+        setCurrentUser(null);
+        setIsDbLoading(false);
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const handleGoogleSignIn = async () => {
+    setIsDbLoading(true);
+    const provider = new GoogleAuthProvider();
+    provider.setCustomParameters({ prompt: 'select_account' });
+    try {
+      await signInWithPopup(auth, provider);
+      showNotification("Verified Google secure vault sync successfully!", "success");
+    } catch (err) {
+      console.error("Google Sign-In failed:", err);
+      showNotification("Google Sign-In failed. Please try again.", "error");
+      setIsDbLoading(false);
+    }
+  };
+
+  const handleSignOut = async () => {
+    setIsDbLoading(true);
+    try {
+      await signOut(auth);
+      setIsDbLoaded(false);
+      showNotification("Disconnected secure cloud vault. Switched to local storage.", "success");
+    } catch (err) {
+      console.error("Sign-Out failed:", err);
+      showNotification("Could not sign out.", "error");
+    } finally {
+      setIsDbLoading(false);
+    }
+  };
+
+  // Sync state FROM Firestore on Authentication completion
+  useEffect(() => {
+    if (!currentUser) return;
+
+    let active = true;
+
+    const loadCloudData = async () => {
+      setIsDbLoading(true);
+      try {
+        const uid = currentUser.uid;
+
+        // 1. User Profile
+        const profile = await getUserProfile(uid);
+        if (!active) return;
+
+        if (profile) {
+          setWallet(prev => ({
+            ...prev,
+            spendingBalance: profile.spendingBalance,
+            flexibleBalance: profile.flexibleBalance,
+            accumulatedYieldSui: profile.accumulatedYieldSui,
+            spendAndSaveEnabled: profile.spendAndSaveEnabled,
+            spendAndSavePercentage: profile.spendAndSavePercentage,
+            suiAddress: profile.suiAddress || prev.suiAddress
+          }));
+          setRoutingRatioPolicy(profile.routingRatioPolicy as any || 'balanced');
+          setEmailAlertsEnabled(profile.emailAlertsEnabled);
+          setUserEmailAddress(profile.userEmailAddress || 'ayobamioketona@gmail.com');
+        } else {
+          // Initialize fresh db doc
+          await saveUserProfile(uid, {
+            suiAddress: wallet.suiAddress,
+            spendingBalance: wallet.spendingBalance,
+            flexibleBalance: wallet.flexibleBalance,
+            accumulatedYieldSui: wallet.accumulatedYieldSui,
+            spendAndSaveEnabled: wallet.spendAndSaveEnabled,
+            spendAndSavePercentage: wallet.spendAndSavePercentage,
+            routingRatioPolicy,
+            emailAlertsEnabled,
+            userEmailAddress
+          });
+        }
+
+        // 2. Allocation Rules
+        const dbRules = await getAllocationRules(uid);
+        if (!active) return;
+        if (dbRules && dbRules.length > 0) {
+          setRules(dbRules as AllocationRule[]);
+        } else {
+          for (const rule of rules) {
+            await saveAllocationRule(uid, rule);
+          }
+        }
+
+        // 3. Target Plans
+        const dbTargets = await getTargetSavingsPlans(uid);
+        if (!active) return;
+        if (dbTargets && dbTargets.length > 0) {
+          setTargetPlans(dbTargets as TargetSavingsPlan[]);
+        } else {
+          for (const plan of targetPlans) {
+            await saveTargetSavingsPlan(uid, plan);
+          }
+        }
+
+        // 4. Fixed Deposits
+        const dbFixed = await getFixedDepositPlans(uid);
+        if (!active) return;
+        if (dbFixed && dbFixed.length > 0) {
+          setFixedDeposits(dbFixed as FixedDepositPlan[]);
+        } else {
+          for (const fd of fixedDeposits) {
+            await saveFixedDepositPlan(uid, fd);
+          }
+        }
+
+        // 5. Transactions List
+        const dbTxs = await getHistoricalTransactions(uid);
+        if (!active) return;
+        if (dbTxs && dbTxs.length > 0) {
+          setTransactions(dbTxs as HistoricalTransaction[]);
+        } else {
+          for (const tx of transactions) {
+            await saveHistoricalTransaction(uid, tx);
+          }
+        }
+
+        if (active) {
+          setIsDbLoaded(true);
+        }
+      } catch (err) {
+        console.error("Error reading full setup from Firestore:", err);
+      } finally {
+        if (active) {
+          setIsDbLoading(false);
+        }
+      }
+    };
+
+    loadCloudData();
+
+    return () => {
+      active = false;
+    };
+  }, [currentUser]);
+
   // Load State from LocalStorage if exists
   const [wallet, setWallet] = useState<WalletState>(() => {
     const saved = localStorage.getItem('sui_wealth_wallet');
@@ -604,6 +780,14 @@ export default function App() {
     ];
   });
 
+  const [otterInvestments, setOtterInvestments] = useState<OtterInvestment[]>(() => {
+    const saved = localStorage.getItem('sui_wealth_otter_investments');
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) { /* ignore */ }
+    }
+    return [];
+  });
+
   // Yield accumulation speed controls
   const [simulationSpeed, setSimulationSpeed] = useState<number>(1); // 1x is live APY rate for accurate representation
   const [lastTxHash, setLastTxHash] = useState<string>('0xe295cda28e9301da01dfb0cb901b028dfac90da01fd80ccbc920a0129abc1029');
@@ -612,12 +796,70 @@ export default function App() {
   const [errorToast, setErrorToast] = useState('');
   const [successToast, setSuccessToast] = useState('');
 
+  // --- SETTINGS VALUES PER USER INTENT ---
+  const [theme, setTheme] = useState<'dark' | 'light'>(() => {
+    return (localStorage.getItem('sui_wealth_theme') as 'dark' | 'light') || 'dark';
+  });
+
+  const [txPassword, setTxPassword] = useState<string>(() => {
+    return localStorage.getItem('sui_wealth_tx_password') || '';
+  });
+
+  const [oldPasswordChangeInput, setOldPasswordChangeInput] = useState<string>('');
+  const [newPasswordChangeInput, setNewPasswordChangeInput] = useState<string>('');
+  const [newPasswordSetupInput, setNewPasswordSetupInput] = useState<string>('');
+
+  const [isTxPasswordEnabled, setIsTxPasswordEnabled] = useState<boolean>(() => {
+    return localStorage.getItem('sui_wealth_tx_password_enabled') === 'true';
+  });
+
+  const [activeNetwork, setActiveNetwork] = useState<'mainnet' | 'testnet' | 'devnet'>(() => {
+    return (localStorage.getItem('sui_wealth_network') as any) || 'mainnet';
+  });
+
+  const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
+
+  // States for password execution interceptor
+  const [pendingTxAction, setPendingTxAction] = useState<{
+    description: string;
+    action: () => void;
+  } | null>(null);
+  const [passwordInput, setPasswordInput] = useState<string>('');
+  const [passwordError, setPasswordError] = useState<string>('');
+
+  useEffect(() => {
+    localStorage.setItem('sui_wealth_theme', theme);
+  }, [theme]);
+
+  useEffect(() => {
+    localStorage.setItem('sui_wealth_tx_password', txPassword);
+  }, [txPassword]);
+
+  useEffect(() => {
+    localStorage.setItem('sui_wealth_tx_password_enabled', String(isTxPasswordEnabled));
+  }, [isTxPasswordEnabled]);
+
+  useEffect(() => {
+    localStorage.setItem('sui_wealth_network', activeNetwork);
+  }, [activeNetwork]);
+
+  const executeWithPassword = (description: string, action: () => void) => {
+    if (isTxPasswordEnabled && txPassword) {
+      setPendingTxAction({ description, action });
+      setPasswordInput('');
+      setPasswordError('');
+    } else {
+      action();
+    }
+  };
+
   // Active terminal preview steps
   const [currentPtbSteps, setCurrentPtbSteps] = useState<string[]>([]);
 
   // Simulation Faucet / Peer Payout Trigger Form
   const [currentView, setCurrentView] = useState<'hub' | 'advisor'>('hub');
-  const [activeService, setActiveService] = useState<'flexible' | 'fixed' | 'target' | 'rules' | 'advisor' | 'ledger' | 'faucet' | 'transfer'>('flexible');
+  const [activeService, setActiveService] = useState<'flexible' | 'fixed' | 'target' | 'rules' | 'advisor' | 'ledger' | 'faucet' | 'transfer' | 'investments'>('flexible');
+  const [expandedInvestmentId, setExpandedInvestmentId] = useState<string | null>(null);
   const [faucetAmountSim, setFaucetAmountSim] = useState('300');
   const [incomingAlert, setIncomingAlert] = useState<IncomingPaymentAlert | null>(null);
   
@@ -675,11 +917,37 @@ export default function App() {
 
   useEffect(() => {
     localStorage.setItem('penny_otter_email_alerts_enabled', String(emailAlertsEnabled));
-  }, [emailAlertsEnabled]);
+    if (isDbLoaded && currentUser) {
+      saveUserProfile(currentUser.uid, {
+        suiAddress: wallet.suiAddress,
+        spendingBalance: wallet.spendingBalance,
+        flexibleBalance: wallet.flexibleBalance,
+        accumulatedYieldSui: wallet.accumulatedYieldSui,
+        spendAndSaveEnabled: wallet.spendAndSaveEnabled,
+        spendAndSavePercentage: wallet.spendAndSavePercentage,
+        routingRatioPolicy,
+        emailAlertsEnabled,
+        userEmailAddress
+      }).catch(err => console.error(err));
+    }
+  }, [emailAlertsEnabled, isDbLoaded, currentUser]);
 
   useEffect(() => {
     localStorage.setItem('penny_otter_email_address', userEmailAddress);
-  }, [userEmailAddress]);
+    if (isDbLoaded && currentUser) {
+      saveUserProfile(currentUser.uid, {
+        suiAddress: wallet.suiAddress,
+        spendingBalance: wallet.spendingBalance,
+        flexibleBalance: wallet.flexibleBalance,
+        accumulatedYieldSui: wallet.accumulatedYieldSui,
+        spendAndSaveEnabled: wallet.spendAndSaveEnabled,
+        spendAndSavePercentage: wallet.spendAndSavePercentage,
+        routingRatioPolicy,
+        emailAlertsEnabled,
+        userEmailAddress
+      }).catch(err => console.error(err));
+    }
+  }, [userEmailAddress, isDbLoaded, currentUser]);
 
   useEffect(() => {
     localStorage.setItem('penny_otter_wallet_bypassed', String(bypassed));
@@ -689,30 +957,110 @@ export default function App() {
     localStorage.setItem('sui_wealth_balance_visible', String(isBalanceVisible));
   }, [isBalanceVisible]);
 
-  // Local storage syncing
+  // Local storage & Cloud database syncing
   useEffect(() => {
     localStorage.setItem('sui_wealth_wallet', JSON.stringify(wallet));
-  }, [wallet]);
+    if (isDbLoaded && currentUser) {
+      saveUserProfile(currentUser.uid, {
+        suiAddress: wallet.suiAddress,
+        spendingBalance: wallet.spendingBalance,
+        flexibleBalance: wallet.flexibleBalance,
+        accumulatedYieldSui: wallet.accumulatedYieldSui,
+        spendAndSaveEnabled: wallet.spendAndSaveEnabled,
+        spendAndSavePercentage: wallet.spendAndSavePercentage,
+        routingRatioPolicy,
+        emailAlertsEnabled,
+        userEmailAddress
+      }).catch(err => console.error(err));
+    }
+  }, [wallet, isDbLoaded, currentUser]);
 
   useEffect(() => {
     localStorage.setItem('sui_wealth_rules', JSON.stringify(rules));
-  }, [rules]);
+    if (isDbLoaded && currentUser) {
+      const syncRules = async () => {
+        const dbRules = await getAllocationRules(currentUser.uid);
+        const currentIds = new Set(rules.map(r => r.id));
+        for (const dbRule of dbRules) {
+          if (!currentIds.has(dbRule.id)) {
+            await deleteAllocationRule(currentUser.uid, dbRule.id);
+          }
+        }
+        for (const rule of rules) {
+          await saveAllocationRule(currentUser.uid, rule);
+        }
+      };
+      syncRules().catch(err => console.error(err));
+    }
+  }, [rules, isDbLoaded, currentUser]);
 
   useEffect(() => {
     localStorage.setItem('sui_wealth_targets', JSON.stringify(targetPlans));
-  }, [targetPlans]);
+    if (isDbLoaded && currentUser) {
+      const syncTargets = async () => {
+        const dbTargets = await getTargetSavingsPlans(currentUser.uid);
+        const currentIds = new Set(targetPlans.map(tp => tp.id));
+        for (const dbTarget of dbTargets) {
+          if (!currentIds.has(dbTarget.id)) {
+            await deleteTargetSavingsPlan(currentUser.uid, dbTarget.id);
+          }
+        }
+        for (const plan of targetPlans) {
+          await saveTargetSavingsPlan(currentUser.uid, plan);
+        }
+      };
+      syncTargets().catch(err => console.error(err));
+    }
+  }, [targetPlans, isDbLoaded, currentUser]);
 
   useEffect(() => {
     localStorage.setItem('sui_wealth_fixed', JSON.stringify(fixedDeposits));
-  }, [fixedDeposits]);
+    if (isDbLoaded && currentUser) {
+      const syncFixed = async () => {
+        const dbFixed = await getFixedDepositPlans(currentUser.uid);
+        const currentIds = new Set(fixedDeposits.map(fd => fd.id));
+        for (const dbFd of dbFixed) {
+          if (!currentIds.has(dbFd.id)) {
+            await deleteFixedDepositPlan(currentUser.uid, dbFd.id);
+          }
+        }
+        for (const fd of fixedDeposits) {
+          await saveFixedDepositPlan(currentUser.uid, fd);
+        }
+      };
+      syncFixed().catch(err => console.error(err));
+    }
+  }, [fixedDeposits, isDbLoaded, currentUser]);
 
   useEffect(() => {
     localStorage.setItem('sui_wealth_txs', JSON.stringify(transactions));
-  }, [transactions]);
+    if (isDbLoaded && currentUser) {
+      for (const tx of transactions) {
+        saveHistoricalTransaction(currentUser.uid, tx).catch(err => console.error(err));
+      }
+    }
+  }, [transactions, isDbLoaded, currentUser]);
+
+  useEffect(() => {
+    localStorage.setItem('sui_wealth_otter_investments', JSON.stringify(otterInvestments));
+  }, [otterInvestments]);
 
   useEffect(() => {
     localStorage.setItem('sui_wealth_policy', routingRatioPolicy);
-  }, [routingRatioPolicy]);
+    if (isDbLoaded && currentUser) {
+      saveUserProfile(currentUser.uid, {
+        suiAddress: wallet.suiAddress,
+        spendingBalance: wallet.spendingBalance,
+        flexibleBalance: wallet.flexibleBalance,
+        accumulatedYieldSui: wallet.accumulatedYieldSui,
+        spendAndSaveEnabled: wallet.spendAndSaveEnabled,
+        spendAndSavePercentage: wallet.spendAndSavePercentage,
+        routingRatioPolicy,
+        emailAlertsEnabled,
+        userEmailAddress
+      }).catch(err => console.error(err));
+    }
+  }, [routingRatioPolicy, isDbLoaded, currentUser]);
 
   // Synchronize rules based on policy and active statuses dynamically (percentage-free math!)
   useEffect(() => {
@@ -789,9 +1137,9 @@ export default function App() {
 
         // 1. Tick Flexible savings
         if (wallet.flexibleBalance > 0) {
-          // oWealth yields 8.5% APY
-          // R_second = 0.085 / (365 * 24 * 3600)
-          const interestRatePerSecond = 0.085 / (365 * 24 * 3600);
+          // oWealth yields 0.001% weekly APY per user instruction
+          // R_second = 0.00001 / (7 * 24 * 3600)
+          const interestRatePerSecond = 0.00001 / (7 * 24 * 3600);
           const earned = wallet.flexibleBalance * interestRatePerSecond * effectiveDelta;
 
           setWallet(prev => ({
@@ -818,6 +1166,74 @@ export default function App() {
           });
           return hasActive ? next : prev;
         });
+
+        // 3. Tick Active Otter Autopilot Investments
+        let totalRefundAmount = 0;
+        let totalRefundProfit = 0;
+        const maturedList: OtterInvestment[] = [];
+
+        setOtterInvestments(prev => {
+          if (prev.length === 0 || !prev.some(inv => inv.status === 'active')) return prev;
+          return prev.map(inv => {
+            if (inv.status === 'active') {
+              const interestRatePerSecond = (inv.apy / 100) / (365 * 24 * 3600);
+              const earned = inv.amountSui * interestRatePerSecond * effectiveDelta;
+              const remaining = inv.timeRemainingSec - effectiveDelta;
+
+              if (remaining <= 0) {
+                const finalProfit = inv.profitMade + earned;
+                totalRefundAmount += inv.amountSui;
+                totalRefundProfit += finalProfit;
+                const updated = {
+                  ...inv,
+                  profitMade: finalProfit,
+                  timeRemainingSec: 0,
+                  status: 'completed' as const
+                };
+                maturedList.push(updated);
+                return updated;
+              } else {
+                return {
+                  ...inv,
+                  profitMade: inv.profitMade + earned,
+                  timeRemainingSec: remaining
+                };
+              }
+            }
+            return inv;
+          });
+        });
+
+        if (totalRefundAmount > 0) {
+          setWallet(prev => ({
+            ...prev,
+            flexibleBalance: prev.flexibleBalance + totalRefundAmount + totalRefundProfit,
+            accumulatedYieldSui: prev.accumulatedYieldSui + totalRefundProfit
+          }));
+
+          maturedList.forEach(inv => {
+            showNotification(`🦦 Autopilot triggered! Otter successfully redeemed ${inv.amountSui.toFixed(1)} SUI from ${inv.protocol} (+${inv.profitMade.toFixed(4)} SUI gain) back to oWealth Flexible Yield as matured!`, 'success');
+
+            // Log transition
+            const hash = generateMockTxHash();
+            const newTx: HistoricalTransaction = {
+              id: Math.random().toString(),
+              txHash: hash,
+              type: 'withdraw_flexible',
+              amountSui: inv.amountSui + inv.profitMade,
+              timestamp: new Date().toISOString(),
+              description: `Otter Autopilot successfully evacuated collateral from ${inv.protocol}. Deposited ${inv.amountSui.toFixed(1)} SUI capital + ${inv.profitMade.toFixed(4)} SUI earnings back to oWealth Flexible savings.`,
+              ptbCommandCount: 3,
+              ptbSteps: [
+                '// Otter Autopilot Automated Redemption Block',
+                `tx.moveCall({ target: "0x2::otter_investment::exit_protocol", arguments: [tx.pure.u64(${Math.floor(inv.amountSui * 1e9)})] });`,
+                `tx.moveCall({ target: "0x2::suiwealth::deposit_flexible", arguments: [] });`
+              ],
+              status: 'success'
+            };
+            setTransactions(prevTxs => [newTx, ...prevTxs]);
+          });
+        }
       }
     }, 450);
 
@@ -1024,66 +1440,68 @@ export default function App() {
       return;
     }
 
-    const hash = generateMockTxHash();
-    setLastTxHash(hash);
+    executeWithPassword(`Confirm Transfer of ${formatSui(amt)} SUI`, () => {
+      const hash = generateMockTxHash();
+      setLastTxHash(hash);
 
-    // If Spend & Save is active, save set percentage!
-    let snsApplied = false;
-    let snsSavedAmt = 0;
-    let finalSpendingDeduction = amt;
+      // If Spend & Save is active, save set percentage!
+      let snsApplied = false;
+      let snsSavedAmt = 0;
+      let finalSpendingDeduction = amt;
 
-    if (wallet.spendAndSaveEnabled && wallet.spendAndSavePercentage > 0) {
-      snsSavedAmt = amt * (wallet.spendAndSavePercentage / 100);
-      if (wallet.spendingBalance >= (amt + snsSavedAmt)) {
-        snsApplied = true;
-        finalSpendingDeduction = amt + snsSavedAmt;
+      if (wallet.spendAndSaveEnabled && wallet.spendAndSavePercentage > 0) {
+        snsSavedAmt = amt * (wallet.spendAndSavePercentage / 100);
+        if (wallet.spendingBalance >= (amt + snsSavedAmt)) {
+          snsApplied = true;
+          finalSpendingDeduction = amt + snsSavedAmt;
+        }
       }
-    }
 
-    setWallet(prev => ({
-      ...prev,
-      spendingBalance: prev.spendingBalance - finalSpendingDeduction,
-      flexibleBalance: prev.flexibleBalance + (snsApplied ? snsSavedAmt : 0),
-    }));
+      setWallet(prev => ({
+        ...prev,
+        spendingBalance: prev.spendingBalance - finalSpendingDeduction,
+        flexibleBalance: prev.flexibleBalance + (snsApplied ? snsSavedAmt : 0),
+      }));
 
-    // Record main outward transfer
-    const txSteps = [
-      '// Outward Peer Transfer PTB',
-      `tx.setSender(${INITIAL_ADDRESS});`,
-      `let [transfer_coin] = tx.splitCoins(tx.gas, [${amt.toFixed(2)}]);`,
-      `tx.transferObjects([transfer_coin], "${mockSendAddress || '0x_recipient'}");`
-    ];
+      // Record main outward transfer
+      const txSteps = [
+        '// Outward Peer Transfer PTB',
+        `tx.setSender(${INITIAL_ADDRESS});`,
+        `let [transfer_coin] = tx.splitCoins(tx.gas, [${amt.toFixed(2)}]);`,
+        `tx.transferObjects([transfer_coin], "${mockSendAddress || '0x_recipient'}");`
+      ];
 
-    if (snsApplied) {
-      const ratioX = wallet.spendAndSavePercentage === 100 ? '1x' : wallet.spendAndSavePercentage === 150 ? '1.5x' : '2x';
-      txSteps.push(`\n// Spend & Save Rule Active (Ratio: ${ratioX})`);
-      txSteps.push(`let [sns_coin] = tx.splitCoins(tx.gas, [${snsSavedAmt.toFixed(2)}]);`);
-      txSteps.push(`tx.moveCall({ target: "0x3::oWealth_vault::deposit", arguments: [sns_coin] });`);
-    }
+      if (snsApplied) {
+        const ratioX = wallet.spendAndSavePercentage === 100 ? '1x' : wallet.spendAndSavePercentage === 150 ? '1.5x' : '2x';
+        txSteps.push(`\n// Spend & Save Rule Active (Ratio: ${ratioX})`);
+        txSteps.push(`let [sns_coin] = tx.splitCoins(tx.gas, [${snsSavedAmt.toFixed(2)}]);`);
+        txSteps.push(`tx.moveCall({ target: "0x3::oWealth_vault::deposit", arguments: [sns_coin] });`);
+      }
 
-    const mainTx: HistoricalTransaction = {
-      id: Math.random().toString(),
-      txHash: hash,
-      type: snsApplied ? 'spend_and_save_trigger' : 'spending_transfer',
-      amountSui: amt,
-      timestamp: new Date().toISOString(),
-      description: `Sent ${formatSui(amt)} to ${mockSendAddress || 'anonymous peer Address'}.${
-        snsApplied ? ` Triggered automated Spend & Save of +${formatSui(snsSavedAmt)} to flexible savings.` : ''
-      }`,
-      ptbCommandCount: snsApplied ? 4 : 2,
-      ptbSteps: txSteps,
-      status: 'success'
-    };
+      const mainTx: HistoricalTransaction = {
+        id: Math.random().toString(),
+        txHash: hash,
+        type: snsApplied ? 'spend_and_save_trigger' : 'spending_transfer',
+        amountSui: amt,
+        timestamp: new Date().toISOString(),
+        description: `Sent ${formatSui(amt)} to ${mockSendAddress || 'anonymous peer Address'}.${
+          snsApplied ? ` Triggered automated Spend & Save of +${formatSui(snsSavedAmt)} to flexible savings.` : ''
+        }`,
+        ptbCommandCount: snsApplied ? 4 : 2,
+        ptbSteps: txSteps,
+        status: 'success'
+      };
 
-    setTransactions(prev => [mainTx, ...prev]);
-    setMockSendAmount('');
-    setMockSendAddress('');
-    showNotification(
-      snsApplied 
-        ? `Sent ${formatSui(amt)}! Spend-and-Save moved ${formatSui(snsSavedAmt)} to oWealth!`
-        : `Sent ${formatSui(amt)} successfully!`, 
-      'success'
-    );
+      setTransactions(prev => [mainTx, ...prev]);
+      setMockSendAmount('');
+      setMockSendAddress('');
+      showNotification(
+        snsApplied 
+          ? `Sent ${formatSui(amt)}! Spend-and-Save moved ${formatSui(snsSavedAmt)} to oWealth!`
+          : `Sent ${formatSui(amt)} successfully!`, 
+        'success'
+      );
+    });
   };
 
   // Triggers the pop-up transaction alert center
@@ -1200,9 +1618,9 @@ export default function App() {
         to: userEmailAddress || 'ayobamioketona@gmail.com',
         subject: `PennyOtter Automated split compiled successfully | Received: +${customAmount.toFixed(1)} SUI`,
         body: `Hi there!\n\nA fresh incoming PayStream of +${customAmount.toFixed(2)} SUI has been processed through your customized routing rules.\n\n` +
-          `🔐 PTB TX Block Signed: ${hash.slice(0, 16)}...${hash.slice(-12)}\n` +
-          `⏰ Timestamp: ${new Date().toLocaleString()}\n\n` +
-          `📋 Distribution Logs:\n${activeRulesLabels}\n\n` +
+          `PTB TX Block Signed: ${hash.slice(0, 16)}...${hash.slice(-12)}\n` +
+          `Timestamp: ${new Date().toLocaleString()}\n\n` +
+          `Distribution Logs:\n${activeRulesLabels}\n\n` +
           `Your assets are generating continuous sandbox interest compound curves. Open PennyOtter to claim or view.`,
         amount: customAmount,
         timestamp: new Date().toLocaleTimeString(),
@@ -1372,10 +1790,10 @@ export default function App() {
       spendingBalance: prev.spendingBalance - amountSui,
     }));
 
-    let defaultApy = 10;
-    if (durationDays === 30) defaultApy = 7;
-    if (durationDays === 180) defaultApy = 14;
-    if (durationDays === 360) defaultApy = 20;
+    let defaultApy = 0.6;
+    if (durationDays === 30) defaultApy = 0.5;
+    if (durationDays === 180) defaultApy = 0.65;
+    if (durationDays === 360) defaultApy = 0.7;
 
     const newDep: FixedDepositPlan = {
       id: 'f_custom_' + Math.random().toString().slice(2, 6),
@@ -1530,7 +1948,7 @@ export default function App() {
         id: 'f_ai_' + Math.random().toString().slice(2, 6),
         amountSui: fixedAlloc,
         durationDays: 90,
-        apy: 10, // 10.00% APY
+        apy: 0.6, // 0.60% APY
         startDate: new Date().toISOString(),
         maturityDate: new Date(Date.now() + 90 * 24 * 3600 * 1000).toISOString(),
         isWithdrawn: false,
@@ -1594,6 +2012,116 @@ export default function App() {
     showNotification(`Invested ${formatSui(totalFlex)} from oWealth Flex balance strictly following AI advice.`, 'success');
   };
 
+  const handleOtterDeployInvestment = (protocol: string, amountSui: number, apy: number, durationSec: number, rationale: string) => {
+    if (amountSui > wallet.flexibleBalance) {
+      showNotification(`Insufficient oWealth Flexible Balance. You only have ${wallet.flexibleBalance.toFixed(2)} SUI, but requested ${amountSui.toFixed(2)} SUI.`, 'error');
+      return;
+    }
+
+    // Deduct from flexibleBalance
+    setWallet(prev => ({
+      ...prev,
+      flexibleBalance: prev.flexibleBalance - amountSui
+    }));
+
+    // Add to otterInvestments
+    const newInv: OtterInvestment = {
+      id: 'otter_' + Math.random().toString().slice(2, 6),
+      protocol,
+      amountSui,
+      apy,
+      profitMade: 0,
+      timeRemainingSec: durationSec,
+      totalDurationSec: durationSec,
+      status: 'active',
+      description: rationale,
+      createdAt: new Date().toISOString()
+    };
+    
+    setOtterInvestments(prev => [newInv, ...prev]);
+
+    // Create historical transaction
+    const hash = generateMockTxHash();
+    const newTx: HistoricalTransaction = {
+      id: Math.random().toString(),
+      txHash: hash,
+      type: 'programmable_allocation',
+      amountSui: amountSui,
+      timestamp: new Date().toISOString(),
+      description: `Otter Autopilot deployed ${amountSui.toFixed(1)} SUI into ${protocol} at ${apy.toFixed(2)}% APY. Autopilot set to redeem in ${(durationSec / 60).toFixed(0)} mins.`,
+      ptbCommandCount: 4,
+      ptbSteps: [
+        '// Otter Autopilot Investment Deploy Block',
+        `tx.setSender(${wallet.suiAddress});`,
+        `let [withdraw_coin] = tx.moveCall({ target: "0x2::oWealth::withdraw_flex", arguments: [tx.pure.u64(${Math.floor(amountSui * 1e9)})] });`,
+        `tx.moveCall({ target: "0x2::otter_investment::enter_protocol", arguments: [tx.pure("${protocol}"), withdraw_coin, tx.pure.u64(${durationSec})] });`
+      ],
+      status: 'success'
+    };
+
+    setTransactions(prev => [newTx, ...prev]);
+    showNotification(`Otter Autopilot: Deployed ${amountSui.toFixed(1)} SUI into ${protocol}!`, 'success');
+    
+    // Switch active view and active service to investments
+    setCurrentView('hub');
+    setActiveService('investments');
+  };
+
+  const handleTerminateInvestment = (investmentId: string) => {
+    const inv = otterInvestments.find(i => i.id === investmentId);
+    if (!inv || inv.status !== 'active') {
+      showNotification("Investment position is either completed or already closed.", "error");
+      return;
+    }
+
+    executeWithPassword(`Terminate Autopilot Investment on ${inv.protocol}`, () => {
+      // Refund principal + accrued profit back to flexible saving
+      const refundAmount = inv.amountSui;
+      const profit = inv.profitMade;
+      const totalRefund = refundAmount + profit;
+
+      setWallet(prev => ({
+        ...prev,
+        flexibleBalance: prev.flexibleBalance + totalRefund,
+        accumulatedYieldSui: prev.accumulatedYieldSui + profit
+      }));
+
+      // Update investment status to completed
+      setOtterInvestments(prev => prev.map(item => {
+        if (item.id === investmentId) {
+          return {
+            ...item,
+            status: 'completed' as const,
+            timeRemainingSec: 0,
+            description: `${item.description} (Terminated Early by User)`
+          };
+        }
+        return item;
+      }));
+
+      // Create historical log transaction
+      const hash = generateMockTxHash();
+      const newTx: HistoricalTransaction = {
+        id: Math.random().toString(),
+        txHash: hash,
+        type: 'withdraw_flexible',
+        amountSui: totalRefund,
+        timestamp: new Date().toISOString(),
+        description: `Early termination: Evacuated ${refundAmount.toFixed(1)} SUI + ${profit.toFixed(4)} SUI accrued interest from ${inv.protocol} back to oWealth Flexible Savings.`,
+        ptbCommandCount: 3,
+        ptbSteps: [
+          '// Early Force Autopilot Evacuation',
+          `tx.moveCall({ target: "0x2::otter_investment::force_exit", arguments: [tx.pure.u64(${Math.floor(refundAmount * 1e9)})] });`,
+          `tx.moveCall({ target: "0x2::suiwealth::deposit_flexible", arguments: [] });`
+        ],
+        status: 'success'
+      };
+
+      setTransactions(prev => [newTx, ...prev]);
+      showNotification(`Investment on ${inv.protocol} terminated successfully. Refunded ${totalRefund.toFixed(4)} SUI.`, 'success');
+    });
+  };
+
   const clearHistory = () => {
     setTransactions([]);
     showNotification('System historical log entries formatted.', 'success');
@@ -1611,7 +2139,7 @@ export default function App() {
   };
 
   return (
-    <div className="bg-[#050506] min-h-screen text-slate-100 selection:bg-blue-500/30 selection:text-white font-sans antialiased relative overflow-hidden">
+    <div className={`${theme === 'light' ? 'light text-slate-900 bg-[#f8fafc]' : 'text-slate-100 bg-[#050506]'} min-h-screen selection:bg-blue-500/30 selection:text-white font-sans antialiased relative overflow-hidden transition-colors duration-300`}>
       
       {/* Background Ambient Radial Glows */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
@@ -1632,41 +2160,28 @@ export default function App() {
             </div>
             <div>
               <h1 className="font-extrabold text-sm leading-tight tracking-tight text-white font-sans">
-                PennyOtter <span className="text-blue-400 font-mono font-bold text-xs">/ PayStream</span>
+                PennyOtter
               </h1>
-              <p className="text-[10px] text-slate-400 uppercase tracking-widest font-mono font-bold">
-                Programmable Financial Autopilot
-              </p>
             </div>
           </div>
 
+
+
           <div className="flex items-center gap-3">
-            {/* Native SUI Network Mode */}
-            <div className="bg-zinc-950/90 rounded-xl px-3 py-1 font-mono text-[10px] font-bold text-slate-300 border border-zinc-850 shadow-sm">
-              SUI NATIVE
+            {/* Preference & Network Status Pill */}
+            <div className="hidden sm:flex items-center gap-1 bg-zinc-950/80 px-2.5 py-1.5 rounded-xl border border-zinc-800 font-mono text-[9px] font-bold text-slate-400">
+              <span className={`w-1.5 h-1.5 rounded-full ${activeNetwork === 'mainnet' ? 'bg-emerald-500' : activeNetwork === 'testnet' ? 'bg-blue-500 animate-pulse' : 'bg-purple-500'}`} />
+              <span className="uppercase">{activeNetwork}</span>
             </div>
 
-            {/* Real-time Email Alert Status Toggle */}
+            {/* General App Settings Button */}
             <button
-              id="header-email-alerts-toggle"
-              onClick={() => setEmailAlertsEnabled(prev => !prev)}
-              className={`flex items-center gap-1.5 px-3 py-1 rounded-xl font-mono text-[10px] font-bold border cursor-pointer transition-all ${
-                emailAlertsEnabled
-                  ? "bg-blue-600/10 text-blue-400 border-blue-500/30 shadow-md"
-                  : "bg-zinc-950/90 text-slate-400 border-zinc-850"
-              }`}
-              title={emailAlertsEnabled ? "Email Alerts Enabled (Click to Disable)" : "Email Alerts Disabled (Click to Enable)"}
+              onClick={() => setIsSettingsOpen(true)}
+              className="p-1.5 bg-zinc-950 border border-zinc-800 rounded-xl text-slate-400 hover:text-white hover:bg-zinc-900 duration-200 transition-all text-xs font-sans font-bold flex items-center justify-center cursor-pointer shrink-0"
+              title="PennyOtter Preferences & Security Settings"
             >
-              <Bell className={`w-3 h-3 ${emailAlertsEnabled ? "animate-bounce text-blue-400" : "text-slate-500"}`} />
-              <span className="hidden sm:inline">EMAIL ALERTS:</span>
-              <span>{emailAlertsEnabled ? "ACTIVE" : "OFF"}</span>
+              <Settings className="w-4 h-4 text-slate-350 hover:rotate-45 transition-transform" />
             </button>
-
-            {/* Live Yield Clock Status */}
-            <div className="hidden md:flex items-center gap-1.5 bg-zinc-950/90 px-3 py-1.5 rounded-xl border border-zinc-850 font-mono text-[10px] text-emerald-400 font-bold">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span>LIVE APY (1x)</span>
-            </div>
 
             {/* Address connection bar */}
             <div id="suidappkit-connect-component" className="text-xs flex items-center gap-2">
@@ -1738,32 +2253,30 @@ export default function App() {
               <div className="grid grid-cols-3 gap-2.5 sm:gap-4 border-t border-white/5 pt-4 mb-6 text-[11px] sm:text-xs text-slate-300 relative z-10 font-sans">
                 <div className="bg-white/[0.02] border border-white/[0.04] p-2.5 rounded-2xl cursor-pointer hover:bg-white/[0.04] select-none transition-colors" onClick={() => setIsBalanceVisible(!isBalanceVisible)} title="Click to toggle balance visibility">
                   <span className="text-[9px] text-slate-400 font-extrabold uppercase block col-span-1">Spending Cash</span>
-                  <span className="font-extrabold font-mono text-xs sm:text-sm mt-0.5 block text-white">{isBalanceVisible ? formatSui(wallet.spendingBalance, 1) + ' SUI' : '••••'}</span>
+                  <span className="font-extrabold font-mono text-xs sm:text-sm mt-0.5 block text-white">{isBalanceVisible ? formatSui(wallet.spendingBalance, 1) : '••••'}</span>
                 </div>
                 <div className="bg-white/[0.02] border border-white/[0.04] p-2.5 rounded-2xl cursor-pointer hover:bg-white/[0.04] select-none transition-colors" onClick={() => setIsBalanceVisible(!isBalanceVisible)} title="Click to toggle balance visibility">
                   <span className="text-[9px] text-slate-400 font-extrabold uppercase block font-sans col-span-1">oWealth Flexible</span>
-                  <span className="font-extrabold font-mono text-xs sm:text-sm mt-0.5 block text-emerald-400">{isBalanceVisible ? formatSui(wallet.flexibleBalance, 1) + ' SUI' : '••••'}</span>
+                  <span className="font-extrabold font-mono text-xs sm:text-sm mt-0.5 block text-emerald-400">{isBalanceVisible ? formatSui(wallet.flexibleBalance, 1) : '••••'}</span>
                 </div>
                 <div className="bg-white/[0.02] border border-white/[0.04] p-2.5 rounded-2xl cursor-pointer hover:bg-white/[0.04] select-none transition-colors" onClick={() => setIsBalanceVisible(!isBalanceVisible)} title="Click to toggle balance visibility">
                   <span className="text-[9px] text-slate-400 font-extrabold uppercase block col-span-1">Vaulted/Fixed</span>
-                  <span className="font-extrabold font-mono text-xs sm:text-sm mt-0.5 block text-blue-400">{isBalanceVisible ? formatSui(totalLockedFixed + totalLockedTarget, 1) + ' SUI' : '••••'}</span>
+                  <span className="font-extrabold font-mono text-xs sm:text-sm mt-0.5 block text-blue-400">{isBalanceVisible ? formatSui(totalLockedFixed + totalLockedTarget, 1) : '••••'}</span>
                 </div>
               </div>
 
               {/* 3 Action Square buttons like the image */}
-              <div className="grid grid-cols-3 gap-3 relative z-10 max-w-sm mx-auto">
+              <div className="grid grid-cols-3 gap-2 sm:gap-3 relative z-10 max-w-sm mx-auto">
                 <button
                   onClick={() => {
-                    setActiveService('transfer');
-                    setCurrentView('hub');
-                    setIsServiceModalOpen(true);
+                    setIsAddMoneyOpen(true);
                   }}
                   className="flex flex-col items-center gap-1.5 group cursor-pointer border-none bg-transparent animate-fade-in"
                 >
                   <div className="w-12 h-12 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-center shadow-lg transition-all group-hover:scale-105 group-hover:bg-white/10 active:scale-95">
-                    <Send className="w-5 h-5 text-emerald-400 stroke-[2px]" />
+                    <ArrowDownLeft className="w-5 h-5 text-emerald-400 stroke-[2px]" />
                   </div>
-                  <span className="text-[11px] sm:text-xs font-bold text-slate-300 group-hover:text-white font-sans mt-0.5 transition-colors">Transfer</span>
+                  <span className="text-[10px] sm:text-xs font-bold text-slate-300 group-hover:text-white font-sans mt-0.5 transition-colors">Fund account</span>
                 </button>
 
                 <button
@@ -1777,7 +2290,7 @@ export default function App() {
                   <div className="w-12 h-12 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-center shadow-lg transition-all group-hover:scale-105 group-hover:bg-white/10 active:scale-95">
                     <History className="w-5 h-5 text-emerald-400 stroke-[2px]" />
                   </div>
-                  <span className="text-[11px] sm:text-xs font-bold text-slate-300 group-hover:text-white font-sans mt-0.5 transition-colors">Transaction</span>
+                  <span className="text-[10px] sm:text-xs font-bold text-slate-300 group-hover:text-white font-sans mt-0.5 transition-colors">Transaction</span>
                 </button>
 
                 <button
@@ -1791,7 +2304,7 @@ export default function App() {
                   <div className="w-12 h-12 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-center shadow-lg transition-all group-hover:scale-105 group-hover:bg-white/10 active:scale-95">
                     <ArrowUpRight className="w-6 h-6 text-emerald-400 stroke-[2.5px]" />
                   </div>
-                  <span className="text-[11px] sm:text-xs font-bold text-slate-300 group-hover:text-white font-sans mt-0.5 transition-colors">Withdrawal</span>
+                  <span className="text-[10px] sm:text-xs font-bold text-slate-300 group-hover:text-white font-sans mt-0.5 transition-colors">Withdrawal</span>
                 </button>
               </div>
             </div>
@@ -2045,13 +2558,7 @@ export default function App() {
                           onBack={() => {
                             setIsServiceModalOpen(false);
                           }}
-                          onApplyRatio={(policy) => {
-                            setRoutingRatioPolicy(policy);
-                            setActiveService('rules');
-                            setCurrentView('hub');
-                            showNotification(`AI allocation rule applied successfully! Routing policy updated to ${policy === 'save_more_2x' ? 'Maximum Saver (2:1)' : policy === 'save_more_1_5x' ? 'Accelerated Saver (1.5:1)' : 'Balanced Model (1:1)'}.`, 'success');
-                          }}
-                          onReallocFlexible={handleReallocateFlexible}
+                          onInvest={handleOtterDeployInvestment}
                         />
                       ) : (
                         <>
@@ -2097,6 +2604,226 @@ export default function App() {
                               routingRatioPolicy={routingRatioPolicy}
                               setRoutingRatioPolicy={setRoutingRatioPolicy}
                             />
+                          )}
+
+                          {activeService === 'investments' && (
+                            <div className="space-y-6">
+                              {/* Headers layout */}
+                              <div className="flex flex-col md:flex-row justify-between items-start md:items-center border-b border-white/5 pb-4 gap-3">
+                                <div>
+                                  <h2 className="text-white font-black text-sm uppercase tracking-wider flex items-center gap-2 font-mono">
+                                    <Briefcase className="w-5 h-5 text-emerald-400" />
+                                    <span>Otter Autopilot Investments</span>
+                                  </h2>
+                                  <p className="text-xs text-slate-400 font-sans">
+                                    Track real-time yields and smart autopilot positions managed by Otter SUI AI
+                                  </p>
+                                </div>
+                                <div className="text-[10px] uppercase font-bold font-mono tracking-wider bg-emerald-955/40 text-emerald-400 border border-emerald-900/30 px-3 py-1 rounded-full flex items-center gap-1.5 animate-pulse">
+                                  <Bot className="w-3.5 h-3.5" />
+                                  <span>Otter Copilot Active</span>
+                                </div>
+                              </div>
+
+                              {otterInvestments.length === 0 ? (
+                                <div className="glass-panel border-dashed p-10 rounded-3xl text-center flex flex-col items-center justify-center min-h-[300px]">
+                                  <div className="bg-emerald-950/40 p-4 rounded-full border border-emerald-900/30 mb-4 text-emerald-450">
+                                    <Briefcase className="w-8 h-8 text-emerald-400" />
+                                  </div>
+                                  <h3 className="text-white font-bold text-sm font-sans">No Active Deployments</h3>
+                                  <p className="text-xs text-slate-400 max-w-sm mt-1 mb-5 font-sans">
+                                    You don't have any active autopilot investments. Instruct Otter AI to search and deploy SUI tokens from your Flexible Yield balance now!
+                                  </p>
+                                  <button
+                                    onClick={() => {
+                                      setCurrentView('advisor');
+                                      setActiveService('advisor');
+                                    }}
+                                    className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold text-xs px-5 py-2.5 rounded-xl transition-all cursor-pointer border-none font-sans"
+                                  >
+                                    Ask Otter AI to Deploy Yield
+                                  </button>
+                                </div>
+                              ) : (
+                                <div className="space-y-6">
+                                  {/* Active Investments */}
+                                  <div className="space-y-3 text-left">
+                                    <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest pl-1 font-mono">
+                                      Active Autopilot Positions
+                                    </h3>
+                                    
+                                    <div className="grid grid-cols-1 gap-4">
+                                      {otterInvestments.filter(i => i.status === 'active').length === 0 ? (
+                                        <p className="text-[11px] text-slate-400 pl-1 p-4 bg-zinc-900/20 rounded-xl italic font-sans border border-zinc-805">
+                                          No active positions. All investments processed by Otter AI have matured.
+                                        </p>
+                                      ) : (
+                                        otterInvestments.filter(i => i.status === 'active').map((inv) => {
+                                          const pctElapsed = ((inv.totalDurationSec - inv.timeRemainingSec) / inv.totalDurationSec) * 100;
+                                          const isExpanded = expandedInvestmentId === inv.id;
+                                          return (
+                                            <div 
+                                              key={inv.id}
+                                              className={`glass-panel rounded-2xl overflow-hidden border transition-all duration-300 ${isExpanded ? 'border-emerald-500/30 shadow-lg shadow-emerald-950/10' : 'hover:border-zinc-800'}`}
+                                            >
+                                              <div 
+                                                onClick={() => setExpandedInvestmentId(isExpanded ? null : inv.id)}
+                                                className="p-5 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 cursor-pointer"
+                                              >
+                                                {/* Details */}
+                                                <div className="space-y-1">
+                                                  <div className="flex items-center gap-2 flex-wrap">
+                                                    <span className="text-xs font-black text-white uppercase tracking-wider font-mono">{inv.protocol}</span>
+                                                    <span className="text-[9px] bg-emerald-950/60 border border-emerald-900/30 text-emerald-400 font-mono font-bold px-2 py-0.5 rounded-md">
+                                                      {inv.apy.toFixed(2)}% APY
+                                                    </span>
+                                                  </div>
+                                                  <p className="text-[10px] text-slate-400 flex items-center gap-1.5 font-sans">
+                                                    <Info className="w-3.5 h-3.5 text-emerald-400/85" />
+                                                    <span>Click to toggle protocol rationale and auto-redemption logs</span>
+                                                  </p>
+                                                </div>
+
+                                                {/* Metrics */}
+                                                <div className="flex items-center gap-6 font-mono self-stretch sm:self-auto justify-between sm:justify-start">
+                                                  <div className="text-left w-24">
+                                                    <span className="text-[9px] text-slate-500 block font-bold">PRINCIPAL:</span>
+                                                    <span className="text-white text-xs font-extrabold">{inv.amountSui.toFixed(1)} SUI</span>
+                                                  </div>
+
+                                                  <div className="text-left w-28">
+                                                    <span className="text-[9px] text-slate-500 block font-bold">YIELD ACCRUED:</span>
+                                                    <span className="text-emerald-400 text-xs font-black animate-pulse flex items-center gap-0.5">
+                                                      +{inv.profitMade.toFixed(4)} <span className="text-[8px] text-slate-300">SUI</span>
+                                                    </span>
+                                                  </div>
+
+                                                  <div className="text-right w-24">
+                                                    <span className="text-[9px] text-slate-500 block font-bold">AUTO-EXIT:</span>
+                                                    <span className="text-blue-300 text-xs font-black flex items-center gap-1 justify-end">
+                                                      <Clock className="w-3.5 h-3.5 text-blue-400" />
+                                                      <span>{inv.timeRemainingSec.toFixed(0)}s</span>
+                                                    </span>
+                                                  </div>
+                                                </div>
+                                              </div>
+
+                                              {/* Elapsed Time indicator */}
+                                              <div className="h-1 bg-zinc-900 w-full relative">
+                                                <div 
+                                                  className="absolute top-0 bottom-0 left-0 bg-gradient-to-r from-emerald-500 to-blue-500 transition-all duration-300"
+                                                  style={{ width: `${Math.min(100, Math.max(0, pctElapsed))}%` }}
+                                                />
+                                              </div>
+
+                                              {/* Expanded Details container */}
+                                              <AnimatePresence>
+                                                {isExpanded && (
+                                                  <motion.div
+                                                    initial={{ height: 0, opacity: 0 }}
+                                                    animate={{ height: "auto", opacity: 1 }}
+                                                    exit={{ height: 0, opacity: 0 }}
+                                                    transition={{ duration: 0.3 }}
+                                                    className="border-t border-white/5 bg-zinc-950/50"
+                                                  >
+                                                    <div className="p-5 space-y-4 text-xs text-left">
+                                                      <div className="space-y-1 block">
+                                                        <span className="text-[10px] font-black uppercase tracking-wider text-slate-550 font-mono">Otter Investment Analysis & Rationale</span>
+                                                        <p className="text-slate-300 leading-relaxed font-sans">{inv.description}</p>
+                                                      </div>
+
+                                                      <div className="p-3.5 bg-black/60 border border-zinc-900 rounded-xl space-y-2 font-mono text-[10px] text-slate-400">
+                                                        <div className="flex justify-between flex-wrap gap-1">
+                                                          <span>Smart Autopilot Contract:</span>
+                                                          <span className="text-slate-300 underline">0x88f2::otter_autopilot::pool_index</span>
+                                                        </div>
+                                                        <div className="flex justify-between flex-wrap gap-1">
+                                                          <span>Automatic Action Time:</span>
+                                                          <span className="text-indigo-405 text-indigo-300">In {inv.timeRemainingSec.toFixed(0)} seconds</span>
+                                                        </div>
+                                                        <div className="flex justify-between border-t border-white/5 pt-2 mt-2 flex-wrap gap-1">
+                                                          <span>Simulated Action logic:</span>
+                                                          <span className="text-emerald-405 text-emerald-400">Otter AI will evacuate collateral and re-deposit SUI into oWealth Flexible Pool (0.001% weekly yield).</span>
+                                                        </div>
+                                                      </div>
+
+                                                      <div className="flex justify-end pt-1">
+                                                        <button
+                                                          type="button"
+                                                          onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleTerminateInvestment(inv.id);
+                                                          }}
+                                                          className="flex items-center gap-1.5 bg-rose-950/40 hover:bg-rose-900 border border-rose-900/30 hover:border-rose-800/40 text-rose-400 hover:text-white font-bold text-[10px] px-3.5 py-2 rounded-xl transition-all cursor-pointer"
+                                                        >
+                                                          <span className="w-1.5 h-1.5 bg-rose-500 rounded-full animate-ping" />
+                                                          <span>Terminate Position Early</span>
+                                                        </button>
+                                                      </div>
+                                                    </div>
+                                                  </motion.div>
+                                                )}
+                                              </AnimatePresence>
+                                            </div>
+                                          );
+                                        })
+                                      )}
+                                    </div>
+                                  </div>
+
+                                  {/* Matured History list */}
+                                  <div className="space-y-3 pt-3 text-left">
+                                    <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest pl-1 font-mono">
+                                      Matured / Reaped Positions
+                                    </h3>
+
+                                    <div className="grid grid-cols-1 gap-3">
+                                      {otterInvestments.filter(i => i.status === 'completed').length === 0 ? (
+                                        <p className="text-[11px] text-slate-400 pl-1 p-3 bg-zinc-900/10 rounded-xl italic font-sans border border-zinc-805">
+                                          No historical investments. Start your first Otter AI strategy above!
+                                        </p>
+                                      ) : (
+                                        otterInvestments.filter(i => i.status === 'completed').map((inv) => (
+                                          <div 
+                                            key={inv.id}
+                                            className="p-4 bg-zinc-950/40 border border-zinc-905 w-full rounded-2xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 opacity-75 border border-zinc-805"
+                                          >
+                                            <div>
+                                              <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                                <span className="text-xs font-bold text-slate-300 font-mono">{inv.protocol}</span>
+                                                <span className="text-[9px] bg-zinc-90 w-auto border border-zinc-800 text-slate-400 font-mono px-2 py-0.5 rounded">
+                                                  {inv.apy.toFixed(1)}% APY
+                                                </span>
+                                                <span className="text-[9px] bg-emerald-950/60 text-emerald-400 border border-emerald-900/40 px-2 py-0.5 rounded font-bold uppercase font-mono">
+                                                  Matured
+                                                </span>
+                                              </div>
+                                              <p className="text-[10px] text-slate-450 font-sans">
+                                                Launched on {new Date(inv.createdAt).toLocaleString()}
+                                              </p>
+                                            </div>
+
+                                            <div className="flex items-center gap-6 font-mono self-stretch sm:self-auto justify-between sm:justify-start">
+                                              <div className="text-left">
+                                                <span className="text-[9px] text-slate-500 block font-bold">PRINCIPAL REFUNDED:</span>
+                                                <span className="text-slate-350 text-xs font-semibold">{inv.amountSui.toFixed(1)} SUI</span>
+                                              </div>
+                                              <div className="text-right">
+                                                <span className="text-[9px] text-slate-500 block font-bold">TOTAL PROFIT REAPED:</span>
+                                                <span className="text-emerald-405 text-emerald-400 text-xs font-black">
+                                                  +{inv.profitMade.toFixed(4)} SUI
+                                                </span>
+                                              </div>
+                                            </div>
+                                          </div>
+                                        ))
+                                      )}
+                                    </div>
+                                  </div>
+
+                                </div>
+                              )}
+                            </div>
                           )}
 
                           {activeService === 'ledger' && (
@@ -2274,25 +3001,25 @@ export default function App() {
       {/* 2. ADD MONEY POPUP MODAL (SUI WALLET INTERACTION + SLUSH blockchain consensus simulation) */}
       <AnimatePresence>
         {isAddMoneyOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/85 backdrop-blur-md">
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 15 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 15 }}
               transition={{ type: "spring", duration: 0.4 }}
-              className="w-full max-w-md bg-[#090f1e] border border-white/10 rounded-3xl p-6 shadow-2xl relative overflow-hidden backdrop-blur-xl animate-fade-in"
+              className="w-full max-w-md max-h-[88vh] bg-[#090f1e] border border-white/10 rounded-3xl p-5 sm:p-6 shadow-2xl relative flex flex-col overflow-hidden backdrop-blur-xl animate-fade-in"
             >
               <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full blur-2xl pointer-events-none" />
               <div className="absolute -bottom-16 -left-16 w-48 h-48 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none" />
 
-              <div className="flex justify-between items-start mb-4 relative z-10 text-left">
+              <div className="flex justify-between items-start mb-4 relative z-10 text-left shrink-0">
                 <div className="flex items-center gap-2.5">
                   <div className="p-2 bg-emerald-500/10 text-emerald-400 rounded-xl border border-emerald-500/20">
                     <Wallet className="w-5 h-5 font-bold" />
                   </div>
                   <div>
-                    <h3 className="text-white font-bold text-sm font-sans uppercase tracking-wider">Sui Wallet Bridge</h3>
-                    <p className="text-[10px] text-slate-400 font-medium font-sans text-left">Collect assets and verify blocks on Slush Ledger</p>
+                    <h3 className="text-white font-bold text-sm font-sans uppercase tracking-wider">Fund SUI Account</h3>
+                    <p className="text-[10px] text-slate-400 font-medium font-sans text-left">Fund SUI spending cash & execute direct treasury splits</p>
                   </div>
                 </div>
                 {addMoneyStep === 'idle' && (
@@ -2306,205 +3033,208 @@ export default function App() {
                 )}
               </div>
 
-              {addMoneyStep === 'idle' ? (
-                <div className="space-y-4 relative z-10 font-sans text-left">
-                  {/* Select amount */}
-                  <div className="space-y-1.5">
-                    <label className="block text-[10px] text-slate-400 uppercase tracking-wider font-extrabold text-left">Amount to Collect (SUI)</label>
-                    <div className="grid grid-cols-4 gap-2 text-left">
-                      {['25', '50', '100', '250'].map((val) => (
+              {/* Scrollable Modal Content Container */}
+              <div className="overflow-y-auto flex-1 pr-1.5 -mr-2 relative z-10 text-slate-100">
+                {addMoneyStep === 'idle' ? (
+                  <div className="space-y-4 font-sans text-left pb-1">
+                    {/* Select amount */}
+                    <div className="space-y-1.5">
+                      <label className="block text-[10px] text-slate-400 uppercase tracking-wider font-extrabold text-left">Amount to Fund (SUI)</label>
+                      <div className="grid grid-cols-4 gap-2 text-left">
+                        {['25', '50', '100', '250'].map((val) => (
+                          <button
+                            key={val}
+                            type="button"
+                            onClick={() => setAddMoneyAmount(val)}
+                            className={`text-xs font-mono font-bold py-2 rounded-xl border transition-all cursor-pointer ${
+                              addMoneyAmount === val
+                                ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/50 shadow-sm'
+                                : 'bg-white/[0.02] text-slate-300 border-white/5 hover:bg-white/[0.05] hover:border-white/10'
+                            }`}
+                          >
+                            {val} SUI
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Custom amount */}
+                    <div className="space-y-1.5 text-left">
+                      <label className="block text-[10px] text-slate-400 uppercase tracking-wider font-extrabold">Or Custom Amount</label>
+                      <div className="relative">
+                        <input
+                          type="number"
+                          step="any"
+                          value={addMoneyAmount}
+                          onChange={(e) => setAddMoneyAmount(e.target.value)}
+                          placeholder="Enter customized SUI amount"
+                          className="w-full glass-input text-xs px-3.5 py-2.5 rounded-xl pr-12 text-white font-mono font-bold focus:outline-none focus:border-emerald-500/60"
+                        />
+                        <span className="absolute top-1/2 right-3.5 -translate-y-1/2 text-[10px] font-black text-slate-400 font-mono">SUI</span>
+                      </div>
+                    </div>
+
+                    {/* SUI Source Address with QR Code Scanner */}
+                    <div className="space-y-1.5 text-left">
+                      <div className="flex justify-between items-center text-[10px] text-slate-400 font-extrabold uppercase tracking-wider">
+                        <span>Source SUI Address (Optional)</span>
                         <button
-                          key={val}
                           type="button"
-                          onClick={() => setAddMoneyAmount(val)}
-                          className={`text-xs font-mono font-bold py-2 rounded-xl border transition-all cursor-pointer ${
-                            addMoneyAmount === val
-                              ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/50 shadow-sm'
-                              : 'bg-white/[0.02] text-slate-300 border-white/5 hover:bg-white/[0.05] hover:border-white/10'
+                          onClick={() => {
+                            setQrScannerTargetField('add_money_source');
+                            setIsQrScannerActive(true);
+                          }}
+                          className="flex items-center gap-1 text-blue-400 hover:text-blue-300 font-bold bg-transparent border-none cursor-pointer text-[10px] outline-none"
+                          title="Scan QR Code Address via Camera"
+                        >
+                          <QrCode className="w-3 md:w-3.5 h-3 md:h-3.5" />
+                          <span>Scan Address</span>
+                        </button>
+                      </div>
+                      
+                      <div className="relative">
+                        <input
+                          type="text"
+                          value={customAddMoneySourceAddress}
+                          onChange={(e) => setCustomAddMoneySourceAddress(e.target.value)}
+                          placeholder="Default or scan SUI address (0x...)"
+                          className="w-full glass-input text-[11px] px-3.5 py-2.5 rounded-xl pr-10 text-white font-mono focus:outline-none focus:border-blue-500/60 placeholder-slate-500 font-bold"
+                        />
+                        {customAddMoneySourceAddress && (
+                          <button
+                            type="button"
+                            onClick={() => setCustomAddMoneySourceAddress('')}
+                            className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white bg-transparent border-none text-xs font-sans font-bold cursor-pointer"
+                          >
+                            &times;
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Split routing rule description */}
+                    <div className="space-y-2 text-left">
+                      <label className="block text-[10px] text-slate-400 uppercase tracking-wider font-extrabold">SLUSH Inflow Settlement Mode</label>
+                      
+                      <div className="grid grid-cols-2 gap-2.5 text-left">
+                        <button
+                          type="button"
+                          onClick={() => setAddMoneyMode('auto_split')}
+                          className={`p-3 rounded-2xl text-left border flex flex-col justify-between h-24 transition-all cursor-pointer ${
+                            addMoneyMode === 'auto_split'
+                              ? 'bg-blue-500/10 text-blue-400 border-blue-500/50 shadow-sm'
+                              : 'bg-white/[0.02] text-slate-400 border-white/5 hover:bg-white/[0.05] hover:border-white/10'
                           }`}
                         >
-                          {val} SUI
+                          <span className="text-[10px] uppercase font-bold tracking-wider">Dynamic Ratio Split</span>
+                          <span className="text-[9px] leading-snug">Atomically routing funds into Spending Cash, Flexible, and Target Plans.</span>
                         </button>
-                      ))}
-                    </div>
-                  </div>
 
-                  {/* Custom amount */}
-                  <div className="space-y-1.5 text-left">
-                    <label className="block text-[10px] text-slate-400 uppercase tracking-wider font-extrabold">Or Custom Amount</label>
-                    <div className="relative">
-                      <input
-                        type="number"
-                        step="any"
-                        value={addMoneyAmount}
-                        onChange={(e) => setAddMoneyAmount(e.target.value)}
-                        placeholder="Enter customized SUI amount"
-                        className="w-full glass-input text-xs px-3.5 py-2.5 rounded-xl pr-12 text-white font-mono font-bold focus:outline-none focus:border-emerald-500/60"
-                      />
-                      <span className="absolute top-1/2 right-3.5 -translate-y-1/2 text-[10px] font-black text-slate-400 font-mono">SUI</span>
-                    </div>
-                  </div>
-
-                  {/* SUI Source Address with QR Code Scanner */}
-                  <div className="space-y-1.5 text-left">
-                    <div className="flex justify-between items-center text-[10px] text-slate-400 font-extrabold uppercase tracking-wider">
-                      <span>Source SUI Address (Optional)</span>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setQrScannerTargetField('add_money_source');
-                          setIsQrScannerActive(true);
-                        }}
-                        className="flex items-center gap-1 text-blue-400 hover:text-blue-300 font-bold bg-transparent border-none cursor-pointer text-[10px] outline-none"
-                        title="Scan QR Code Address via Camera"
-                      >
-                        <QrCode className="w-3 md:w-3.5 h-3 md:h-3.5" />
-                        <span>Scan Address</span>
-                      </button>
-                    </div>
-                    
-                    <div className="relative">
-                      <input
-                        type="text"
-                        value={customAddMoneySourceAddress}
-                        onChange={(e) => setCustomAddMoneySourceAddress(e.target.value)}
-                        placeholder="Default or scan SUI address (0x...)"
-                        className="w-full glass-input text-[11px] px-3.5 py-2.5 rounded-xl pr-10 text-white font-mono focus:outline-none focus:border-blue-500/60 placeholder-slate-500 font-bold"
-                      />
-                      {customAddMoneySourceAddress && (
                         <button
                           type="button"
-                          onClick={() => setCustomAddMoneySourceAddress('')}
-                          className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white bg-transparent border-none text-xs font-sans font-bold cursor-pointer"
+                          onClick={() => setAddMoneyMode('incoming_banner')}
+                          className={`p-3 rounded-2xl text-left border flex flex-col justify-between h-24 transition-all cursor-pointer ${
+                            addMoneyMode === 'incoming_banner'
+                              ? 'bg-blue-500/10 text-blue-400 border-blue-500/50 shadow-sm'
+                              : 'bg-white/[0.02] text-slate-400 border-white/5 hover:bg-white/[0.05] hover:border-white/10'
+                          }`}
                         >
-                          &times;
+                          <span className="text-[10px] uppercase font-bold tracking-wider">Manual Inflow Alert</span>
+                          <span className="text-[9px] leading-snug">Spawns an active ledger popup at the top of the hub for discretionary splits.</span>
+                        </button>
+                      </div>
+
+                      {/* Active routing overview info widget */}
+                      {addMoneyMode === 'auto_split' && (
+                        <div className="bg-white/5 rounded-2xl p-3 border border-white/5 text-[10px] text-slate-400 leading-relaxed font-sans space-y-1 text-left">
+                          <span className="font-bold text-slate-300 block uppercase tracking-wider text-[9px]">Active Treasury Direct Splits:</span>
+                          {rules.filter(r => r.isActive).map(r => {
+                            const splitAmt = parseFloat(addMoneyAmount) * (r.percentage / 100);
+                            return (
+                              <div key={r.id} className="flex justify-between items-center font-mono">
+                                <span>• {r.name} ({r.percentage}%)</span>
+                                <span className="font-extrabold text-blue-400">+{isNaN(splitAmt) ? '0.00' : splitAmt.toFixed(2)} SUI</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="pt-2">
+                      {!currentAccount?.address ? (
+                        <div className="space-y-3">
+                          <div className="p-3 bg-amber-500/10 border border-amber-550/20 rounded-2xl text-[10px] text-amber-300 leading-relaxed font-sans text-left">
+                            <span className="font-bold block text-xs mb-0.5">Sandbox Preview Mode</span>
+                            No active SUI wallet detected in this window. Connect your SUI extension wallet to sign real-time programmable on-chain transaction blocks.
+                          </div>
+                          <div className="flex justify-center py-1">
+                            <ConnectButton />
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleTriggerAddMoney()}
+                            className="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 font-extrabold text-xs uppercase tracking-wider py-3 rounded-xl transition-all active:scale-[0.98] cursor-pointer border-none flex items-center justify-center gap-1.5"
+                          >
+                            <span>Execute Sandbox Run (Simulated)</span>
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => handleTriggerAddMoney()}
+                          className="w-full bg-emerald-500 hover:bg-emerald-400 text-white font-extrabold text-xs uppercase tracking-wider py-3 rounded-xl transition-all shadow-lg active:scale-[0.98] cursor-pointer border-none flex items-center justify-center gap-1.5"
+                        >
+                          <span>Trigger Transaction in Slush</span>
                         </button>
                       )}
                     </div>
                   </div>
-
-                  {/* Split routing rule description */}
-                  <div className="space-y-2 text-left">
-                    <label className="block text-[10px] text-slate-400 uppercase tracking-wider font-extrabold">SLUSH Inflow Settlement Mode</label>
-                    
-                    <div className="grid grid-cols-2 gap-2.5 text-left">
-                      <button
-                        type="button"
-                        onClick={() => setAddMoneyMode('auto_split')}
-                        className={`p-3 rounded-2xl text-left border flex flex-col justify-between h-24 transition-all cursor-pointer ${
-                          addMoneyMode === 'auto_split'
-                            ? 'bg-blue-500/10 text-blue-400 border-blue-500/50 shadow-sm'
-                            : 'bg-white/[0.02] text-slate-400 border-white/5 hover:bg-white/[0.05] hover:border-white/10'
-                        }`}
-                      >
-                        <span className="text-[10px] uppercase font-bold tracking-wider">Dynamic Ratio Split</span>
-                        <span className="text-[9px] leading-snug">Atomically routing funds into Spending Cash, Flexible, and Target Plans.</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => setAddMoneyMode('incoming_banner')}
-                        className={`p-3 rounded-2xl text-left border flex flex-col justify-between h-24 transition-all cursor-pointer ${
-                          addMoneyMode === 'incoming_banner'
-                            ? 'bg-blue-500/10 text-blue-400 border-blue-500/50 shadow-sm'
-                            : 'bg-white/[0.02] text-slate-400 border-white/5 hover:bg-white/[0.05] hover:border-white/10'
-                        }`}
-                      >
-                        <span className="text-[10px] uppercase font-bold tracking-wider">Manual Inflow Alert</span>
-                        <span className="text-[9px] leading-snug">Spawns an active ledger popup at the top of the hub for discretionary splits.</span>
-                      </button>
-                    </div>
-
-                    {/* Active routing overview info widget */}
-                    {addMoneyMode === 'auto_split' && (
-                      <div className="bg-white/5 rounded-2xl p-3 border border-white/5 text-[10px] text-slate-400 leading-relaxed font-sans space-y-1 text-left">
-                        <span className="font-bold text-slate-300 block uppercase tracking-wider text-[9px]">Active Treasury Direct Splits:</span>
-                        {rules.filter(r => r.isActive).map(r => {
-                          const splitAmt = parseFloat(addMoneyAmount) * (r.percentage / 100);
-                          return (
-                            <div key={r.id} className="flex justify-between items-center font-mono">
-                              <span>• {r.name} ({r.percentage}%)</span>
-                              <span className="font-extrabold text-blue-400">+{isNaN(splitAmt) ? '0.00' : splitAmt.toFixed(2)} SUI</span>
-                            </div>
-                          );
-                        })}
+                ) : (
+                  <div className="font-mono text-left bg-[#070b14] border border-white/5 rounded-2xl p-4 text-[11px] leading-relaxed relative overflow-hidden my-1">
+                    <div className="space-y-2 text-slate-300 text-left">
+                      <div className="flex items-center gap-2">
+                        <span className={addMoneyStep === 'handshake' || addMoneyStep === 'signature' || addMoneyStep === 'broadcasting' || addMoneyStep === 'complete' ? 'text-emerald-400 font-bold' : 'text-slate-600'}>[✓]</span>
+                        <span className={addMoneyStep === 'handshake' ? 'text-emerald-400 font-bold animate-pulse' : 'text-slate-400'}>
+                          CONNECTING WITH SUI WALLET COMPILER...
+                        </span>
                       </div>
-                    )}
-                  </div>
 
-                  <div className="pt-2">
-                    {!currentAccount?.address ? (
-                      <div className="space-y-3">
-                        <div className="p-3 bg-amber-500/10 border border-amber-550/20 rounded-2xl text-[10px] text-amber-300 leading-relaxed font-sans text-left">
-                          <span className="font-bold block text-xs mb-0.5">Sandbox Preview Mode</span>
-                          No active SUI wallet detected in this window. Connect your SUI extension wallet to sign real-time programmable on-chain transaction blocks.
-                        </div>
-                        <div className="flex justify-center py-1">
-                          <ConnectButton />
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => handleTriggerAddMoney()}
-                          className="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 font-extrabold text-xs uppercase tracking-wider py-3 rounded-xl transition-all active:scale-[0.98] cursor-pointer border-none flex items-center justify-center gap-1.5"
-                        >
-                          <span>Execute Sandbox Run (Simulated)</span>
-                        </button>
+                      <div className="flex items-center gap-2">
+                        <span className={addMoneyStep === 'signature' || addMoneyStep === 'broadcasting' || addMoneyStep === 'complete' ? 'text-emerald-400 font-bold' : 'text-slate-600'}>
+                          {addMoneyStep === 'handshake' ? '[⋯]' : '[✓]'}
+                        </span>
+                        <span className={addMoneyStep === 'signature' ? 'text-emerald-400 font-bold animate-pulse' : addMoneyStep === 'handshake' ? 'text-slate-600' : 'text-slate-400'}>
+                          REQUESTING SECURE TRANSACTION BLOCK SIGNATURE...
+                        </span>
                       </div>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => handleTriggerAddMoney()}
-                        className="w-full bg-emerald-500 hover:bg-emerald-400 text-white font-extrabold text-xs uppercase tracking-wider py-3 rounded-xl transition-all shadow-lg active:scale-[0.98] cursor-pointer border-none flex items-center justify-center gap-1.5"
-                      >
-                        <span>Trigger Transaction in Slush</span>
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ) : (
-                <div className="font-mono text-left bg-[#070b14] border border-white/5 rounded-2xl p-4 text-[11px] leading-relaxed relative overflow-hidden">
-                  <div className="space-y-2 text-slate-300 text-left">
-                    <div className="flex items-center gap-2">
-                      <span className={addMoneyStep === 'handshake' || addMoneyStep === 'signature' || addMoneyStep === 'broadcasting' || addMoneyStep === 'complete' ? 'text-emerald-400 font-bold' : 'text-slate-600'}>[✓]</span>
-                      <span className={addMoneyStep === 'handshake' ? 'text-emerald-400 font-bold animate-pulse' : 'text-slate-400'}>
-                        CONNECTING WITH SUI WALLET COMPILER...
-                      </span>
+
+                      <div className="flex items-center gap-2">
+                        <span className={addMoneyStep === 'broadcasting' || addMoneyStep === 'complete' ? 'text-emerald-400 font-bold' : 'text-slate-600'}>
+                          {addMoneyStep === 'handshake' || addMoneyStep === 'signature' ? '[⋯]' : '[✓]'}
+                        </span>
+                        <span className={addMoneyStep === 'broadcasting' ? 'text-emerald-400 font-bold animate-pulse' : addMoneyStep === 'handshake' || addMoneyStep === 'signature' ? 'text-slate-600' : 'text-slate-400'}>
+                          BROADCASTING ATOMIC PTB TO SLUSH CONSENSUS NODES...
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <span className={addMoneyStep === 'complete' ? 'text-emerald-400 font-bold' : 'text-slate-600'}>
+                          {addMoneyStep !== 'complete' ? '[⋯]' : '[✓]'}
+                        </span>
+                        <span className={addMoneyStep === 'complete' ? 'text-white font-extrabold animate-pulse' : 'text-slate-600'}>
+                          LEDGER TRANSACTION CONFIRMED & SETTLED!
+                        </span>
+                      </div>
                     </div>
 
-                    <div className="flex items-center gap-2">
-                      <span className={addMoneyStep === 'signature' || addMoneyStep === 'broadcasting' || addMoneyStep === 'complete' ? 'text-emerald-400 font-bold' : 'text-slate-600'}>
-                        {addMoneyStep === 'handshake' ? '[⋯]' : '[✓]'}
-                      </span>
-                      <span className={addMoneyStep === 'signature' ? 'text-emerald-400 font-bold animate-pulse' : addMoneyStep === 'handshake' ? 'text-slate-600' : 'text-slate-400'}>
-                        REQUESTING SECURE TRANSACTION BLOCK SIGNATURE...
-                      </span>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <span className={addMoneyStep === 'broadcasting' || addMoneyStep === 'complete' ? 'text-emerald-400 font-bold' : 'text-slate-600'}>
-                        {addMoneyStep === 'handshake' || addMoneyStep === 'signature' ? '[⋯]' : '[✓]'}
-                      </span>
-                      <span className={addMoneyStep === 'broadcasting' ? 'text-emerald-400 font-bold animate-pulse' : addMoneyStep === 'handshake' || addMoneyStep === 'signature' ? 'text-slate-600' : 'text-slate-400'}>
-                        BROADCASTING ATOMIC PTB TO SLUSH CONSENSUS NODES...
-                      </span>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <span className={addMoneyStep === 'complete' ? 'text-emerald-400 font-bold' : 'text-slate-600'}>
-                        {addMoneyStep !== 'complete' ? '[⋯]' : '[✓]'}
-                      </span>
-                      <span className={addMoneyStep === 'complete' ? 'text-white font-extrabold animate-pulse' : 'text-slate-600'}>
-                        LEDGER TRANSACTION CONFIRMED & SETTLED!
-                      </span>
+                    <div className="mt-4 pt-3 border-t border-white/5 flex items-center justify-between text-[10px] text-slate-500 uppercase font-sans">
+                      <span>Target: Slush Devnet-3</span>
+                      <span className="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
                     </div>
                   </div>
-
-                  <div className="mt-4 pt-3 border-t border-white/5 flex items-center justify-between text-[10px] text-slate-500 uppercase font-sans">
-                    <span>Target: Slush Devnet-3</span>
-                    <span className="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-                  </div>
-                </div>
-              )}
+                )}
+              </div>
             </motion.div>
           </div>
         )}
@@ -2631,6 +3361,456 @@ export default function App() {
             onScanSuccess={handleQrScanSuccess}
             title={qrScannerTargetField === 'add_money_source' ? "Scan Source SUI Wallet Address" : "Scan Destination SUI Recipient Address"}
           />
+        )}
+      </AnimatePresence>
+
+      {/* 5. PREFERENCES & GENERAL SETTINGS MODAL */}
+      <AnimatePresence>
+        {isSettingsOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md">
+            <div 
+              className="absolute inset-0 cursor-default" 
+              onClick={() => setIsSettingsOpen(false)} 
+            />
+            
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 15 }}
+              className="w-full max-w-lg bg-zinc-950 border border-zinc-805 border-zinc-800 rounded-3xl p-6 shadow-2xl relative z-10 text-left overflow-hidden flex flex-col max-h-[90vh]"
+            >
+              {/* Header */}
+              <div className="flex justify-between items-center pb-4 mb-4 border-b border-white/5 shrink-0">
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 bg-blue-900/30 border border-blue-800/40 rounded-xl text-blue-400">
+                    <Settings className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h2 className="text-sm font-bold text-white uppercase tracking-wider font-mono">System Preferences</h2>
+                    <span className="text-[10px] text-slate-400 leading-none">Configure sandbox network, themes, & credentials</span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsSettingsOpen(false)}
+                  className="p-1.5 hover:bg-white/5 rounded-lg text-slate-400 hover:text-white transition-all cursor-pointer bg-transparent border-none"
+                >
+                  <X className="w-4.5 h-4.5" />
+                </button>
+              </div>
+
+              {/* Scrollable content */}
+              <div className="space-y-5 overflow-y-auto pr-1">
+                {/* 1. Theme Configuration */}
+                <div className="space-y-2">
+                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Visual Appearance</span>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      onClick={() => setTheme('dark')}
+                      className={`flex items-center justify-center gap-2 py-2.5 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                        theme === 'dark' 
+                          ? 'bg-zinc-900 border-blue-500 text-blue-400 font-extrabold shadow-md' 
+                          : 'bg-zinc-950/40 border-zinc-800 text-slate-400 hover:text-slate-200'
+                      }`}
+                    >
+                      <span className="w-2 h-2 rounded-full bg-blue-400" />
+                      Slate Dark Mode
+                    </button>
+                    <button
+                      onClick={() => setTheme('light')}
+                      className={`flex items-center justify-center gap-2 py-2.5 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                        theme === 'light' 
+                          ? 'bg-white border-blue-600 text-blue-600 font-extrabold shadow-md' 
+                          : 'bg-zinc-955/40 border-zinc-800 text-slate-450 hover:text-slate-200'
+                      }`}
+                    >
+                      <span className="w-2 h-2 rounded-full bg-blue-600" />
+                      Interactive Light Mode
+                    </button>
+                  </div>
+                </div>
+
+                {/* 2. Network Selection */}
+                <div className="space-y-2">
+                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Active RPC Blockchain Gateway</span>
+                  <div className="grid grid-cols-3 gap-2">
+                    {(['mainnet', 'testnet', 'devnet'] as const).map((net) => {
+                      const isSelected = activeNetwork === net;
+                      return (
+                        <button
+                          key={net}
+                          onClick={() => {
+                            setActiveNetwork(net);
+                            showNotification(`Switched RPC gateway terminal to SUI ${net.toUpperCase()}`, 'success');
+                          }}
+                          className={`flex flex-col items-center justify-center py-2 px-1 rounded-xl border text-[10px] font-bold uppercase transition-all cursor-pointer ${
+                            isSelected 
+                              ? 'bg-zinc-900 border-emerald-500 text-emerald-400 font-extrabold' 
+                              : 'bg-zinc-950/45 border-zinc-800 text-slate-400 hover:text-slate-350 hover:bg-zinc-900/30'
+                          }`}
+                        >
+                          <span className={`w-1.5 h-1.5 rounded-full mb-1 ${net === 'mainnet' ? 'bg-emerald-500' : net === 'testnet' ? 'bg-blue-400' : 'bg-purple-500'}`} />
+                          {net}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <p className="text-[9px] text-slate-500 leading-normal italic">
+                    Note: Different RPC networks load separate sandbox states and testnet multiplier calculations on the Sui validator ledger.
+                  </p>
+                </div>
+
+                {/* 3. Transaction Security Password */}
+                <div className="space-y-4 bg-[#0a0f1d]/60 border border-blue-950/40 rounded-2xl p-4.5 text-left">
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center gap-2">
+                      <Lock className="w-3.5 h-3.5 text-blue-400" />
+                      <span className="text-[11px] font-extrabold text-blue-200 uppercase tracking-wider">Security Access Code</span>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input 
+                        type="checkbox" 
+                        checked={isTxPasswordEnabled} 
+                        onChange={(e) => {
+                          const checked = e.target.checked;
+                          if (checked && !txPassword) {
+                            showNotification("Please set a transaction password below before enabling.", "error");
+                            return;
+                          }
+                          setIsTxPasswordEnabled(checked);
+                          showNotification(
+                            checked 
+                              ? "Transaction Password requirement activated!" 
+                              : "Transaction security password protection deactivated.", 
+                            "success"
+                          );
+                        }} 
+                        className="sr-only peer" 
+                      />
+                      <div className="w-8 h-4.5 bg-zinc-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-slate-300 after:border-zinc-300 after:border after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:bg-blue-500 relative"></div>
+                    </label>
+                  </div>
+
+                  <p className="text-[9px] text-slate-400 leading-normal">
+                    Secure your assets. Once enabled, major outflows, flexible saving redemptions, and locker deposits require inputting this verification password.
+                  </p>
+
+                  {/* Password configuration conditional interface */}
+                  {!txPassword ? (
+                    <div className="space-y-1.5 pt-1">
+                      <span className="text-[9px] font-bold text-slate-400 block uppercase font-mono">Create Security Passcode / PIN</span>
+                      <div className="flex gap-2">
+                        <input
+                          type="password"
+                          placeholder="e.g. 123456"
+                          value={newPasswordSetupInput}
+                          onChange={(e) => setNewPasswordSetupInput(e.target.value)}
+                          className="flex-1 glass-input rounded-xl px-3 py-1.5 text-xs text-white placeholder-slate-650 focus:outline-none font-mono"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const cleaned = newPasswordSetupInput.trim();
+                            if (cleaned.length === 0) {
+                              showNotification("PIN passcode cannot be empty.", "error");
+                              return;
+                            }
+                            setTxPassword(cleaned);
+                            setNewPasswordSetupInput('');
+                            showNotification("Sectors synchronized! Code security passcode initialized. You can now enable the security toggle above.", "success");
+                          }}
+                          className="bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-extrabold px-3.5 py-1.5 rounded-xl transition-all cursor-pointer border-none"
+                        >
+                          Set PIN
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-3.5 pt-1.5">
+                      <div className="p-3 bg-emerald-950/20 border border-emerald-950/40 rounded-xl flex items-center justify-between">
+                        <span className="text-[10px] font-bold text-emerald-400 font-mono">✓ Security Passcode Configured</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            // Quick way to clear/reset passcode if needed
+                            if (window.confirm("Are you sure you want to completely remove your transaction passcode?")) {
+                              setTxPassword('');
+                              setIsTxPasswordEnabled(false);
+                              showNotification("Transaction passcode completely cleared.", "success");
+                            }
+                          }}
+                          className="text-[9px] text-rose-400 hover:text-rose-300 font-bold underline bg-transparent border-none cursor-pointer"
+                        >
+                          Clear
+                        </button>
+                      </div>
+
+                      {/* Change Password Input Blocks */}
+                      <div className="space-y-2 p-3 bg-zinc-900/40 rounded-xl border border-white/5">
+                        <span className="text-[10px] font-bold text-slate-300 block uppercase font-mono">Change Security Password / PIN</span>
+                        
+                        <div className="space-y-1.5">
+                          <label className="text-[9px] font-semibold text-slate-500 block">Current PIN / Password Code</label>
+                          <input
+                            type="password"
+                            placeholder="Enter current password code"
+                            value={oldPasswordChangeInput}
+                            onChange={(e) => setOldPasswordChangeInput(e.target.value)}
+                            className="w-full glass-input rounded-xl px-3 py-1.5 text-xs text-white placeholder-slate-700 focus:outline-none font-mono"
+                          />
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <label className="text-[9px] font-semibold text-slate-500 block">New PIN / Password Code</label>
+                          <input
+                            type="password"
+                            placeholder="Enter brand new password code"
+                            value={newPasswordChangeInput}
+                            onChange={(e) => setNewPasswordChangeInput(e.target.value)}
+                            className="w-full glass-input rounded-xl px-3 py-1.5 text-xs text-white placeholder-slate-700 focus:outline-none font-mono"
+                          />
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (oldPasswordChangeInput !== txPassword) {
+                              showNotification("Old password validation key did not match current PIN.", "error");
+                              return;
+                            }
+                            const cleanedNew = newPasswordChangeInput.trim();
+                            if (cleanedNew.length === 0) {
+                              showNotification("New security passcode PIN cannot be empty.", "error");
+                              return;
+                            }
+                            setTxPassword(cleanedNew);
+                            setOldPasswordChangeInput('');
+                            setNewPasswordChangeInput('');
+                            showNotification("System secure credentials updated successfully!", "success");
+                          }}
+                          className="w-full bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-extrabold py-2 rounded-xl transition-all cursor-pointer border-none font-mono"
+                        >
+                          Update Security Passcode Key
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* 4. Email Asset Alerts */}
+                <div className="space-y-4 bg-[#0a0f1d]/60 border border-blue-950/40 rounded-2xl p-4.5 text-left">
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center gap-2">
+                      <Mail className="w-3.5 h-3.5 text-blue-400" />
+                      <span className="text-[11px] font-extrabold text-blue-200 uppercase tracking-wider">Email Asset Alerts</span>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input 
+                        type="checkbox" 
+                        checked={emailAlertsEnabled} 
+                        onChange={(e) => {
+                          const checked = e.target.checked;
+                          setEmailAlertsEnabled(checked);
+                          showNotification(
+                            checked 
+                              ? "Real-time Email Alerts target mode activated!" 
+                              : "Email notification alerts deactivated.", 
+                            "success"
+                          );
+                        }} 
+                        className="sr-only peer" 
+                      />
+                      <div className="w-8 h-4.5 bg-zinc-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-slate-300 after:border-zinc-300 after:border after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:bg-blue-500 relative"></div>
+                    </label>
+                  </div>
+
+                  <p className="text-[9px] text-slate-400 leading-normal">
+                    Receive immediate notifications, portfolio updates, dynamic automated ratio sweeps, and transaction reports directly in your inbox.
+                  </p>
+
+                  <div className="space-y-1.5 pt-1">
+                    <label className="block text-[10px] text-slate-400 font-sans uppercase font-bold">Simulator Target Email Address</label>
+                    <div className="flex gap-2">
+                      <input
+                        type="email"
+                        placeholder="e.g. your-email@domain.com"
+                        value={userEmailAddress}
+                        disabled={!emailAlertsEnabled}
+                        onChange={(e) => setUserEmailAddress(e.target.value)}
+                        className={`flex-1 text-xs px-3 py-1.5 rounded-xl border focus:outline-none transition-all ${
+                          emailAlertsEnabled
+                            ? "glass-input text-white focus:border-blue-500 font-mono"
+                            : "bg-slate-900/10 border-slate-800/30 text-slate-500 cursor-not-allowed font-mono"
+                        }`}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (userEmailAddress.trim().length === 0) {
+                            showNotification("Email address cannot be empty.", "error");
+                            return;
+                          }
+                          showNotification("Alert target email configuration updated!", "success");
+                        }}
+                        disabled={!emailAlertsEnabled}
+                        className={`text-[10px] font-extrabold px-3 py-1 rounded-xl transition-all border-none ${
+                          emailAlertsEnabled
+                            ? "bg-blue-600 hover:bg-blue-500 text-white cursor-pointer"
+                            : "bg-zinc-800 text-zinc-500 cursor-not-allowed"
+                        }`}
+                      >
+                        Apply
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 5. Other sandbox features */}
+                <div className="space-y-2 pt-1 border-t border-white/5">
+                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest block">Sandbox Testing Harness</span>
+                  <div className="space-y-2.5">
+                    <div className="flex justify-between items-center text-xs">
+                      <div>
+                        <span className="text-xs text-white font-bold block">Simulation multiplier</span>
+                        <span className="text-[9px] text-slate-500 block leading-tight">Augment sandbox yield accruement speeds</span>
+                      </div>
+                      <select
+                        value={simulationSpeed}
+                        onChange={(e) => {
+                          const val = parseInt(e.target.value);
+                          setSimulationSpeed(val);
+                          showNotification(`Set Sandbox simulator speed multiplier to ${val}x`, 'success');
+                        }}
+                        className="glass-input rounded-xl px-2.5 py-1 text-xs text-slate-300 font-bold focus:outline-none cursor-pointer"
+                      >
+                        <option value={1}>1x Normal Speed</option>
+                        <option value={10}>10x Accumulator</option>
+                        <option value={500}>500x Fast-Accrual</option>
+                        <option value={5000}>5000x Max Growth</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+
+              {/* Close Button Footer */}
+              <div className="pt-4 mt-5 border-t border-white/5 flex gap-2 justify-end shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setIsSettingsOpen(false)}
+                  className="bg-zinc-900 border border-zinc-800 text-slate-300 font-extrabold text-xs px-4 py-2.5 rounded-xl hover:bg-zinc-855 hover:text-white transition-all cursor-pointer"
+                >
+                  Save & Return
+                </button>
+              </div>
+
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* 6. PASSWORD CONFIRMATION POPUP INTERCEPTOR */}
+      <AnimatePresence>
+        {pendingTxAction && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/90 backdrop-blur-md">
+            <div 
+              className="absolute inset-0 cursor-default" 
+              onClick={() => {
+                setPendingTxAction(null);
+                setPasswordInput('');
+                setPasswordError('');
+              }} 
+            />
+
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: -10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: -10 }}
+              className="w-full max-w-sm bg-zinc-950 border-2 border-amber-900/30 rounded-3xl p-6 shadow-[0_20px_50px_rgba(245,158,11,0.1)] relative z-10 text-left overflow-hidden"
+            >
+              <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/5 rounded-full blur-2xl pointer-events-none" />
+
+              <div className="flex items-center gap-2.5 pb-3 border-b border-white/5 mb-4">
+                <div className="p-1.5 bg-amber-950/40 border border-amber-900/40 rounded-xl text-amber-500">
+                  <Lock className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-xs font-black text-amber-500 uppercase tracking-widest font-mono">Verify Security Code</h3>
+                  <p className="text-[9px] text-slate-455 capitalize">Transaction auth required</p>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <p className="text-[11px] text-slate-300 font-semibold bg-zinc-900/50 p-3 rounded-xl border border-zinc-800">
+                  {pendingTxAction.description}
+                </p>
+
+                <div className="space-y-2">
+                  <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Security Password Pin</span>
+                  <input
+                    type="password"
+                    placeholder="Enter security password"
+                    value={passwordInput}
+                    onChange={(e) => {
+                      setPasswordInput(e.target.value);
+                      setPasswordError('');
+                    }}
+                    autoFocus
+                    className="w-full glass-input rounded-xl px-3 py-2 text-xs text-white placeholder-slate-700 font-bold focus:outline-none"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        if (passwordInput === txPassword) {
+                          const taskToRun = pendingTxAction.action;
+                          setPendingTxAction(null);
+                          setPasswordInput('');
+                          taskToRun();
+                        } else {
+                          setPasswordError('Invalid transaction passkey pin. Please retry.');
+                        }
+                      }
+                    }}
+                  />
+                  {passwordError && (
+                    <p className="text-[9px] text-rose-500 font-bold flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3" />
+                      {passwordError}
+                    </p>
+                  )}
+                </div>
+
+                <div className="flex gap-2 justify-end pt-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPendingTxAction(null);
+                      setPasswordInput('');
+                      setPasswordError('');
+                    }}
+                    className="bg-zinc-900 border border-zinc-800 text-slate-400 font-bold text-[10px] px-3.5 py-2.5 rounded-xl hover:bg-zinc-800 hover:text-white transition-all cursor-pointer"
+                  >
+                    Cancel Action
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (passwordInput === txPassword) {
+                        const taskToRun = pendingTxAction.action;
+                        setPendingTxAction(null);
+                        setPasswordInput('');
+                        taskToRun();
+                      } else {
+                        setPasswordError('Invalid transaction passkey pin. Please retry.');
+                      }
+                    }}
+                    className="bg-amber-600 hover:bg-amber-500 text-slate-950 font-black text-[10px] px-4 py-2.5 rounded-xl transition-all cursor-pointer border-none"
+                  >
+                    Authorize Action
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
 
