@@ -192,7 +192,7 @@
   background-color: #e2e8f0 !important;
 }
 
-.light .border-zinc-800, .light .border-zinc-900, .light .border-white\/5, .light .border-white\/10 {
+.light .border-zinc-800, .light .border-zinc-900, .light .border-white\/5, .light .border-white\/10, .light .border-blue-950\/40, .light .border-blue-950\/50 {
   border-color: rgba(15, 23, 42, 0.08) !important;
 }
 
@@ -201,7 +201,7 @@
 }
 
 .light .text-emerald-400 {
-  color: #10b981 !important;
+  color: #059669 !important;
 }
 
 .light .text-indigo-400 {
@@ -210,5 +210,69 @@
 
 .light .text-purple-400 {
   color: #7c3aed !important;
+}
+
+/* Hardcoded dark backgrounds overridden to clean light modes */
+.light [class*="bg-[#0a0f1d]"],
+.light [class*="bg-[#0c1428]"],
+.light [class*="bg-[#080d19]"],
+.light [class*="bg-[#090d16]"],
+.light [class*="bg-[#090f1e]"],
+.light [class*="bg-[#070b14]"],
+.light [class*="bg-[#111c34]"],
+.light [class*="bg-[#121d36]"],
+.light [class*="bg-[#070b1c]"],
+.light [class*="bg-[#010610]"],
+.light [class*="bg-[#02050c]"],
+.light [class*="bg-[#080c18]"],
+.light [class*="bg-zinc-950/40"],
+.light [class*="bg-[#080d1a]"] {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+}
+
+.light [class*="border-[#"], 
+.light [class*="border-blue-950"] {
+  border-color: rgba(15, 23, 42, 0.08) !important;
+}
+
+/* Let the ambient container glows be extremely soft in light mode */
+.light [class*="bg-blue-500/5"],
+.light [class*="bg-indigo-500/4"],
+.light [class*="bg-sky-500/3"] {
+  background-color: rgba(37, 99, 235, 0.02) !important;
+}
+
+/* Input tags background overrides */
+.light input {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border-color: rgba(15, 23, 42, 0.12) !important;
+}
+
+.light input::placeholder {
+  color: #94a3b8 !important;
+}
+
+/* Preserve bright texts in light mode containers */
+.light .text-slate-350,
+.light .text-slate-300,
+.light .text-slate-200,
+.light .text-slate-100 {
+  color: #334155 !important;
+}
+
+.light .text-blue-300,
+.light .text-blue-200 {
+  color: #1d4ed8 !important;
+}
+
+.light .text-emerald-300,
+.light .text-emerald-250 {
+  color: #047857 !important;
+}
+
+.light .text-zinc-400 {
+  color: #475569 !important;
 }
 

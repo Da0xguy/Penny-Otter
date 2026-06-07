@@ -2,6 +2,7 @@ import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
+import nodemailer from "nodemailer";
 
 async function startServer() {
   const app = express();
@@ -72,6 +73,61 @@ Find the most profitable protocol on SUI that my SUI tokens can be invested in!`
     } catch (err: any) {
       console.error("Gemini advice API error:", err);
       res.status(500).json({ error: err.message || "Failed to generate investment advice." });
+    }
+  });
+
+  // Real Email Outbound Dispatch API using Nodemailer Configured SMTP
+  app.post("/api/send-email", async (req: express.Request, res: express.Response) => {
+    try {
+      const { to, subject, body } = req.body;
+
+      if (!to) {
+        return res.status(400).json({ success: false, error: "missing_to", message: "Recipient target email ('to') is required." });
+      }
+      
+      const host = process.env.SMTP_HOST || "smtp.gmail.com";
+      const portStr = process.env.SMTP_PORT || "587";
+      const user = process.env.SMTP_USER;
+      const pass = process.env.SMTP_PASS;
+      const from = process.env.SMTP_FROM || "oWealth Alerts <no-reply@owealth.io>";
+
+      if (!user || !pass) {
+        console.warn("SMTP configuration is missing. Logging email body to console instead.");
+        console.log(`[SIMULATED MAIL DELIVERED OUTSIDE]: To: ${to} | Subject: ${subject}\nBody:\n${body}`);
+        return res.json({ 
+          success: false, 
+          error: "credentials_missing",
+          message: "SMTP server credentials (SMTP_USER and SMTP_PASS) are not configured. Configure them under Settings > Secrets to send live outbound mails."
+        });
+      }
+
+      const port = parseInt(portStr, 10);
+      const transporter = nodemailer.createTransport({
+        host,
+        port,
+        secure: port === 465, // True only for SSL 465, standard STARTTLS uses 587
+        auth: {
+          user,
+          pass,
+        },
+      });
+
+      const info = await transporter.sendMail({
+        from,
+        to,
+        subject,
+        text: body,
+      });
+
+      console.log(`Email dispatched to ${to}. MessageId: ${info.messageId}`);
+      return res.json({ success: true, messageId: info.messageId });
+    } catch (err: any) {
+      console.error("Failed to send real email through NodeMailer:", err);
+      return res.status(500).json({ 
+        success: false, 
+        error: "smtp_failed", 
+        message: err.message || "An unexpected error occurred during SMTP mail transit." 
+      });
     }
   });
 

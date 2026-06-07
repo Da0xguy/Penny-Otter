@@ -57,7 +57,9 @@ import {
   Settings,
   Briefcase,
   Bot,
-  Info
+  Info,
+  DollarSign,
+  Shield
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ConnectButton, useCurrentAccount, useSuiClient, useSuiClientQuery, useSignAndExecuteTransaction } from '@mysten/dapp-kit';
@@ -1614,18 +1616,14 @@ export default function App() {
         })
         .join('\n');
 
-      setEmailMockDetails({
-        to: userEmailAddress || 'ayobamioketona@gmail.com',
-        subject: `PennyOtter Automated split compiled successfully | Received: +${customAmount.toFixed(1)} SUI`,
-        body: `Hi there!\n\nA fresh incoming PayStream of +${customAmount.toFixed(2)} SUI has been processed through your customized routing rules.\n\n` +
-          `PTB TX Block Signed: ${hash.slice(0, 16)}...${hash.slice(-12)}\n` +
-          `Timestamp: ${new Date().toLocaleString()}\n\n` +
-          `Distribution Logs:\n${activeRulesLabels}\n\n` +
-          `Your assets are generating continuous sandbox interest compound curves. Open PennyOtter to claim or view.`,
-        amount: customAmount,
-        timestamp: new Date().toLocaleTimeString(),
-      });
-      setShowEmailAlertMockToast(true);
+      const subject = `PennyOtter Automated split compiled successfully | Received: +${customAmount.toFixed(1)} SUI`;
+      const body = `Hi there!\n\nA fresh incoming PayStream of +${customAmount.toFixed(2)} SUI has been processed through your customized routing rules.\n\n` +
+        `PTB TX Block Signed: ${hash.slice(0, 16)}...${hash.slice(-12)}\n` +
+        `Timestamp: ${new Date().toLocaleString()}\n\n` +
+        `Distribution Logs:\n${activeRulesLabels}\n\n` +
+        `Your assets are generating continuous interest compound curves. Open PennyOtter to claim or view.`;
+
+      sendRealEmail(subject, body);
     }
   };
 
@@ -2125,6 +2123,32 @@ export default function App() {
   const clearHistory = () => {
     setTransactions([]);
     showNotification('System historical log entries formatted.', 'success');
+  };
+
+  // Real SMTP Outbound Mailer API dispatch
+  const sendRealEmail = async (subject: string, body: string) => {
+    if (!emailAlertsEnabled || !userEmailAddress) return;
+    try {
+      const response = await fetch('/api/send-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          to: userEmailAddress,
+          subject,
+          body
+        })
+      });
+      const data = await response.json();
+      if (data.success) {
+        showNotification(`Live email dispatched successfully to ${userEmailAddress}!`, 'success');
+      } else {
+        // Fallback info notification (e.g. if SMTP hasn't been configured)
+        showNotification(data.message || "Failed to deliver SMTP mail.", "error");
+      }
+    } catch (err) {
+      console.error("Failed to make /api/send-email call", err);
+      showNotification("Could not communicate with SMTP dispatch service.", "error");
+    }
   };
 
   // Helper toasts
@@ -2698,11 +2722,22 @@ export default function App() {
                                                     </span>
                                                   </div>
 
-                                                  <div className="text-right w-24">
-                                                    <span className="text-[9px] text-slate-500 block font-bold">AUTO-EXIT:</span>
-                                                    <span className="text-blue-300 text-xs font-black flex items-center gap-1 justify-end">
+                                                  <div className="text-right bg-[#090d16] border border-blue-950/50 rounded-xl px-2.5 py-1 flex flex-col justify-center items-end shadow-inner min-w-[125px]">
+                                                    <span className="text-[8px] text-slate-500 block font-bold uppercase tracking-widest font-mono">COUNTDOWN METER</span>
+                                                    <span className="text-blue-300 text-[11px] font-black flex items-center gap-1 font-mono select-none">
+                                                      <span className="relative flex h-1.5 w-1.5">
+                                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                                                        <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-blue-500"></span>
+                                                      </span>
                                                       <Clock className="w-3.5 h-3.5 text-blue-400" />
-                                                      <span>{inv.timeRemainingSec.toFixed(0)}s</span>
+                                                      <span>
+                                                        {Math.floor(inv.timeRemainingSec / 3600).toString().padStart(2, '0')}:
+                                                        {Math.floor((inv.timeRemainingSec % 3600) / 60).toString().padStart(2, '0')}:
+                                                        {Math.floor(inv.timeRemainingSec % 60).toString().padStart(2, '0')}
+                                                      </span>
+                                                    </span>
+                                                    <span className="text-[7.5px] text-emerald-400 font-bold block uppercase tracking-wide mt-0.5">
+                                                      {Math.min(100, Math.max(0, pctElapsed)).toFixed(0)}% Maturity Elapsed
                                                     </span>
                                                   </div>
                                                 </div>
@@ -2758,6 +2793,17 @@ export default function App() {
                                                         >
                                                           <span className="w-1.5 h-1.5 bg-rose-500 rounded-full animate-ping" />
                                                           <span>Terminate Position Early</span>
+                                                        </button>
+                                                        <button
+                                                          type="button"
+                                                          onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleTerminateInvestment(inv.id);
+                                                          }}
+                                                          className="flex items-center gap-1.5 bg-emerald-950/40 hover:bg-emerald-900 border border-emerald-900/30 hover:border-emerald-800/40 text-emerald-400 hover:text-white font-bold text-[10px] px-3.5 py-2 rounded-xl transition-all cursor-pointer font-sans"
+                                                        >
+                                                          <DollarSign className="w-3.5 h-3.5 text-emerald-400" />
+                                                          <span>Claim Profit Early & Evacuate</span>
                                                         </button>
                                                       </div>
                                                     </div>
@@ -3262,68 +3308,6 @@ export default function App() {
 
       {/* Float Toasts for instant user response validation */}
       <div className="fixed bottom-4 right-4 z-50 space-y-4 flex flex-col items-end">
-        {/* Real-time Email Alert Mock Simulation Toast */}
-        <AnimatePresence>
-          {showEmailAlertMockToast && emailMockDetails && (
-            <motion.div
-              id="simulated-email-toast"
-              initial={{ opacity: 0, y: 30, scale: 0.95 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 20, scale: 0.95 }}
-              className="bg-[#0b1329] border-2 border-blue-500 rounded-2xl p-4.5 shadow-[0_12px_40px_rgba(0,0,0,0.65)] w-80 md:w-96 text-left relative overflow-hidden text-slate-100 border-solid"
-            >
-              <div className="absolute top-0 left-0 w-1.5 h-full bg-blue-500" />
-              
-              <div className="flex justify-between items-start mb-2">
-                <div className="flex items-center gap-2">
-                  <div className="p-1.5 bg-blue-950 text-blue-400 rounded-lg border border-blue-900/40">
-                    <Mail className="w-4 h-4 text-blue-400" />
-                  </div>
-                  <div>
-                    <span className="text-[10px] font-mono font-black text-blue-400 uppercase tracking-wider">Simulated Inbound Email</span>
-                    <span className="text-[9px] text-slate-500 block">Sent via PennyOtter Mail Engine</span>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setShowEmailAlertMockToast(false)}
-                  className="p-1 hover:bg-[#121c38] rounded-lg text-slate-400 hover:text-white transition-all border-none bg-transparent cursor-pointer"
-                >
-                  <span className="font-extrabold text-xs">✕</span>
-                </button>
-              </div>
-
-              <div className="h-[1px] bg-slate-800/60 my-2" />
-
-              <div className="space-y-1.5 text-xs">
-                <div>
-                  <span className="text-slate-500 font-extrabold uppercase text-[9px]">To:</span>{' '}
-                  <span className="text-slate-200 font-mono font-medium select-all">{emailMockDetails.to}</span>
-                </div>
-                <div>
-                  <span className="text-slate-500 font-extrabold uppercase text-[9px]">Subject:</span>{' '}
-                  <span className="text-white font-bold select-all">{emailMockDetails.subject}</span>
-                </div>
-                <div className="mt-2 text-[11px] text-slate-300 font-mono bg-[#070b16] border border-slate-800/70 p-3 rounded-lg overflow-y-auto max-h-48 whitespace-pre-line leading-relaxed scrollbar-thin select-all">
-                  {emailMockDetails.body}
-                </div>
-              </div>
-
-              <div className="mt-3 flex justify-between items-center bg-blue-950/20 px-2 py-1 rounded-lg border border-blue-900/10">
-                <span className="text-[10px] text-blue-400 font-semibold flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-ping" />
-                  Email Simulated
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setShowEmailAlertMockToast(false)}
-                  className="text-[10px] bg-blue-600 hover:bg-blue-500 text-white font-extrabold px-2.5 py-1 rounded-md transition-all border-none cursor-pointer"
-                >
-                  Confirm Read
-                </button>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
 
         {successToast && (
           <motion.div
@@ -3464,8 +3448,8 @@ export default function App() {
                 <div className="space-y-4 bg-[#0a0f1d]/60 border border-blue-950/40 rounded-2xl p-4.5 text-left">
                   <div className="flex justify-between items-center">
                     <div className="flex items-center gap-2">
-                      <Lock className="w-3.5 h-3.5 text-blue-400" />
-                      <span className="text-[11px] font-extrabold text-blue-200 uppercase tracking-wider">Security Access Code</span>
+                      <Shield className="w-3.5 h-3.5 text-blue-400" />
+                      <span className="text-[11px] font-extrabold text-blue-200 uppercase tracking-wider">Seal SUI™ Secure Verification</span>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
                       <input 
@@ -3474,14 +3458,14 @@ export default function App() {
                         onChange={(e) => {
                           const checked = e.target.checked;
                           if (checked && !txPassword) {
-                            showNotification("Please set a transaction password below before enabling.", "error");
+                            showNotification("Please configure a Seal SUI passcode below before enabling.", "error");
                             return;
                           }
                           setIsTxPasswordEnabled(checked);
                           showNotification(
                             checked 
-                              ? "Transaction Password requirement activated!" 
-                              : "Transaction security password protection deactivated.", 
+                              ? "Seal SUI secure protection requirement activated!" 
+                              : "Seal SUI security protection deactivated.", 
                             "success"
                           );
                         }} 
@@ -3492,13 +3476,13 @@ export default function App() {
                   </div>
 
                   <p className="text-[9px] text-slate-400 leading-normal">
-                    Secure your assets. Once enabled, major outflows, flexible saving redemptions, and locker deposits require inputting this verification password.
+                    Establish a secure cryptographic Seal on your SUI wealth. Once sealed, outward transfers, flexible pool redemptions, and locker deposits require inputting this verification passcode.
                   </p>
 
                   {/* Password configuration conditional interface */}
                   {!txPassword ? (
                     <div className="space-y-1.5 pt-1">
-                      <span className="text-[9px] font-bold text-slate-400 block uppercase font-mono">Create Security Passcode / PIN</span>
+                      <span className="text-[9px] font-bold text-slate-400 block uppercase font-mono">Setup SUI Seal Passcode</span>
                       <div className="flex gap-2">
                         <input
                           type="password"
@@ -3512,48 +3496,51 @@ export default function App() {
                           onClick={() => {
                             const cleaned = newPasswordSetupInput.trim();
                             if (cleaned.length === 0) {
-                              showNotification("PIN passcode cannot be empty.", "error");
+                              showNotification("SUI Seal Passcode cannot be empty.", "error");
                               return;
                             }
                             setTxPassword(cleaned);
                             setNewPasswordSetupInput('');
-                            showNotification("Sectors synchronized! Code security passcode initialized. You can now enable the security toggle above.", "success");
+                            showNotification("Sectors Sealed! SUI Seal Passcode successfully synchronized. You can now activate Seal SUI protection above.", "success");
                           }}
                           className="bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-extrabold px-3.5 py-1.5 rounded-xl transition-all cursor-pointer border-none"
                         >
-                          Set PIN
+                          Seal SUI Assets
                         </button>
                       </div>
                     </div>
                   ) : (
                     <div className="space-y-3.5 pt-1.5">
                       <div className="p-3 bg-emerald-950/20 border border-emerald-950/40 rounded-xl flex items-center justify-between">
-                        <span className="text-[10px] font-bold text-emerald-400 font-mono">✓ Security Passcode Configured</span>
+                        <span className="text-[10px] font-bold text-emerald-400 font-mono flex items-center gap-1.5">
+                          <Shield className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
+                          <span>✓ SUI Seal Protection Active</span>
+                        </span>
                         <button
                           type="button"
                           onClick={() => {
                             // Quick way to clear/reset passcode if needed
-                            if (window.confirm("Are you sure you want to completely remove your transaction passcode?")) {
+                            if (window.confirm("Are you sure you want to unseal SUI and completely remove active security lock?")) {
                               setTxPassword('');
                               setIsTxPasswordEnabled(false);
-                              showNotification("Transaction passcode completely cleared.", "success");
+                              showNotification("SUI completely unsealed and passcode cleared.", "success");
                             }
                           }}
                           className="text-[9px] text-rose-400 hover:text-rose-300 font-bold underline bg-transparent border-none cursor-pointer"
                         >
-                          Clear
+                          Unseal
                         </button>
                       </div>
 
                       {/* Change Password Input Blocks */}
                       <div className="space-y-2 p-3 bg-zinc-900/40 rounded-xl border border-white/5">
-                        <span className="text-[10px] font-bold text-slate-300 block uppercase font-mono">Change Security Password / PIN</span>
+                        <span className="text-[10px] font-bold text-slate-300 block uppercase font-mono">Update SUI Seal Passcode</span>
                         
                         <div className="space-y-1.5">
-                          <label className="text-[9px] font-semibold text-slate-500 block">Current PIN / Password Code</label>
+                          <label className="text-[9px] font-semibold text-slate-500 block">Current SUI Seal Code</label>
                           <input
                             type="password"
-                            placeholder="Enter current password code"
+                            placeholder="Enter current SUI Seal passcode"
                             value={oldPasswordChangeInput}
                             onChange={(e) => setOldPasswordChangeInput(e.target.value)}
                             className="w-full glass-input rounded-xl px-3 py-1.5 text-xs text-white placeholder-slate-700 focus:outline-none font-mono"
@@ -3561,10 +3548,10 @@ export default function App() {
                         </div>
 
                         <div className="space-y-1.5">
-                          <label className="text-[9px] font-semibold text-slate-500 block">New PIN / Password Code</label>
+                          <label className="text-[9px] font-semibold text-slate-500 block">New SUI Seal Code</label>
                           <input
                             type="password"
-                            placeholder="Enter brand new password code"
+                            placeholder="Enter new custom SUI Seal passcode"
                             value={newPasswordChangeInput}
                             onChange={(e) => setNewPasswordChangeInput(e.target.value)}
                             className="w-full glass-input rounded-xl px-3 py-1.5 text-xs text-white placeholder-slate-700 focus:outline-none font-mono"
@@ -3575,22 +3562,22 @@ export default function App() {
                           type="button"
                           onClick={() => {
                             if (oldPasswordChangeInput !== txPassword) {
-                              showNotification("Old password validation key did not match current PIN.", "error");
+                              showNotification("Current Seal passcode key did not match active record.", "error");
                               return;
                             }
                             const cleanedNew = newPasswordChangeInput.trim();
                             if (cleanedNew.length === 0) {
-                              showNotification("New security passcode PIN cannot be empty.", "error");
+                              showNotification("SUI Seal passcode cannot be empty.", "error");
                               return;
                             }
                             setTxPassword(cleanedNew);
                             setOldPasswordChangeInput('');
                             setNewPasswordChangeInput('');
-                            showNotification("System secure credentials updated successfully!", "success");
+                            showNotification("Seal SUI master passcode successfully updated!", "success");
                           }}
                           className="w-full bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-extrabold py-2 rounded-xl transition-all cursor-pointer border-none font-mono"
                         >
-                          Update Security Passcode Key
+                          Lock New SUI Seal
                         </button>
                       </div>
                     </div>
@@ -3732,12 +3719,12 @@ export default function App() {
               <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/5 rounded-full blur-2xl pointer-events-none" />
 
               <div className="flex items-center gap-2.5 pb-3 border-b border-white/5 mb-4">
-                <div className="p-1.5 bg-amber-950/40 border border-amber-900/40 rounded-xl text-amber-500">
-                  <Lock className="w-4 h-4" />
+                <div className="p-1.5 bg-amber-950/40 border border-amber-900/40 rounded-xl text-amber-500 animate-pulse">
+                  <Shield className="w-4 h-4" />
                 </div>
                 <div>
-                  <h3 className="text-xs font-black text-amber-500 uppercase tracking-widest font-mono">Verify Security Code</h3>
-                  <p className="text-[9px] text-slate-455 capitalize">Transaction auth required</p>
+                  <h3 className="text-xs font-black text-amber-500 uppercase tracking-widest font-mono">Seal SUI™ Secure Verification</h3>
+                  <p className="text-[9px] text-slate-455 capitalize">Cryptographic transaction seal required</p>
                 </div>
               </div>
 
@@ -3747,10 +3734,10 @@ export default function App() {
                 </p>
 
                 <div className="space-y-2">
-                  <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Security Password Pin</span>
+                  <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block font-mono">Seal Passcode Pin</span>
                   <input
                     type="password"
-                    placeholder="Enter security password"
+                    placeholder="Enter Seal SUI passcode PIN"
                     value={passwordInput}
                     onChange={(e) => {
                       setPasswordInput(e.target.value);
@@ -3766,7 +3753,7 @@ export default function App() {
                           setPasswordInput('');
                           taskToRun();
                         } else {
-                          setPasswordError('Invalid transaction passkey pin. Please retry.');
+                          setPasswordError('Invalid Seal SUI passcode pin. Please retry.');
                         }
                       }
                     }}
@@ -3800,12 +3787,12 @@ export default function App() {
                         setPasswordInput('');
                         taskToRun();
                       } else {
-                        setPasswordError('Invalid transaction passkey pin. Please retry.');
+                        setPasswordError('Invalid Seal SUI passcode pin. Please retry.');
                       }
                     }}
                     className="bg-amber-600 hover:bg-amber-500 text-slate-950 font-black text-[10px] px-4 py-2.5 rounded-xl transition-all cursor-pointer border-none"
                   >
-                    Authorize Action
+                    Authorize Seal SUI
                   </button>
                 </div>
               </div>
