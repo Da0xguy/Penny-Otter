@@ -71,6 +71,22 @@
   66% { transform: translate(-20px, 20px) scale(0.9); }
 }
 
+@keyframes waveMotion {
+  0% { transform: translateX(0) scaleY(1); }
+  50% { transform: translateX(-25%) scaleY(0.9); }
+  100% { transform: translateX(-50%) scaleY(1); }
+}
+
+@keyframes floatWater {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-10px) rotate(3deg); }
+}
+
+@keyframes glassShimmer {
+  0% { transform: translateX(-150%) skewX(-25deg); }
+  100% { transform: translateX(150%) skewX(-25deg); }
+}
+
 .animate-glow-slow {
   animation: ambientGlow 25s infinite alternate ease-in-out;
 }
@@ -78,6 +94,58 @@
 .animate-glow-slower {
   animation: ambientGlow 32s infinite alternate-reverse ease-in-out;
 }
+
+.animate-wave-motion {
+  animation: waveMotion 15s infinite linear;
+}
+
+.animate-float-water {
+  animation: floatWater 6s infinite ease-in-out;
+}
+
+/* Premium Card hover glint & shine */
+.sui-card-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+
+.sui-card-shimmer::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(37, 99, 235, 0.08),
+    rgba(56, 189, 248, 0.12),
+    rgba(37, 99, 235, 0.08),
+    transparent
+  );
+  transform: translateX(-150%) skewX(-25deg);
+  transition: none;
+  pointer-events: none;
+}
+
+.sui-card-shimmer:hover::after {
+  transform: translateX(150%) skewX(-25deg);
+  transition: transform 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.light .sui-card-shimmer::after {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(37, 99, 235, 0.04),
+    rgba(56, 189, 248, 0.08),
+    rgba(37, 99, 235, 0.04),
+    transparent
+  );
+}
+
+/* Fluid scrollbars & buttons styling */
 
 /* Custom scrollbars for slick dark terminal console */
 ::-webkit-scrollbar {

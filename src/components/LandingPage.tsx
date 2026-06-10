@@ -98,16 +98,16 @@ export default function LandingPage({ onBypass }: LandingPageProps = {}) {
     <div className="space-y-16 py-4">
       
       {/* HERO SECTION WITH INTEGRATED WALLET CONNECT AND DYNAMIC BLUR EFFECTS */}
-      <section className="relative px-4 py-16 md:py-24 rounded-3xl overflow-hidden bg-gradient-to-b from-[#0c0c0e] via-[#050506] to-[#010101] border border-white/[0.06] text-center">
+      <section className="relative px-4 py-12 md:py-20 text-center">
         {/* Abstract futuristic glowing shapes in background */}
-        <div className="absolute top-0 left-1/4 w-80 h-80 bg-blue-600/10 rounded-full blur-[120px] pointer-events-none" />
-        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-indigo-500/10 rounded-full blur-[140px] pointer-events-none" />
+        <div className="absolute top-0 left-1/4 w-80 h-80 bg-blue-600/10 dark:bg-blue-600/15 rounded-full blur-[120px] pointer-events-none" />
+        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-indigo-500/10 dark:bg-indigo-500/15 rounded-full blur-[140px] pointer-events-none" />
         
         {/* Animated badge */}
         <motion.div 
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="inline-flex items-center gap-2 px-3 py-1 bg-zinc-950/90 border border-zinc-850 rounded-full text-[11px] font-bold text-slate-300 font-sans tracking-wide mb-6 uppercase shadow-sm"
+          className="inline-flex items-center gap-2 px-3 py-1 bg-slate-100/90 dark:bg-zinc-950/90 border border-slate-200 dark:border-zinc-850 rounded-full text-[11px] font-bold text-slate-600 dark:text-slate-300 font-sans tracking-wide mb-6 uppercase shadow-sm"
         >
           <Sparkles className="w-3.5 h-3.5 text-blue-400 animate-pulse" />
           <span>Sui Programmable Finance Engine &bull; Secure V2.1 Sandbox</span>
@@ -117,10 +117,10 @@ export default function LandingPage({ onBypass }: LandingPageProps = {}) {
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="text-4xl md:text-6xl font-extrabold tracking-tight text-white max-w-4xl mx-auto leading-tight"
+          className="text-4xl md:text-6xl font-extrabold tracking-tight text-slate-900 dark:text-white max-w-4xl mx-auto leading-tight"
         >
           Programmable Autopilot for <br />
-          <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-400 via-indigo-200 to-blue-500">
+          <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-500 via-indigo-550 to-blue-600 dark:from-blue-400 dark:via-indigo-200 dark:to-blue-500">
             Your SUI Asset Streams
           </span>
         </motion.h2>
@@ -129,7 +129,7 @@ export default function LandingPage({ onBypass }: LandingPageProps = {}) {
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="text-slate-350 text-slate-300 font-medium text-sm md:text-base mt-6 max-w-2xl mx-auto leading-relaxed"
+          className="text-slate-600 dark:text-slate-300 font-medium text-sm md:text-base mt-6 max-w-2xl mx-auto leading-relaxed"
         >
           PennyOtter automatically splits, routes, and stakes incoming transactions using native Programmable Transaction Blocks (PTB). Connect your SUI wallet to access premium AI budgeting tools, Flexible yield pools, and Fixed savers.
         </motion.p>
@@ -139,16 +139,16 @@ export default function LandingPage({ onBypass }: LandingPageProps = {}) {
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: 0.3 }}
-          className="mt-10 max-w-md mx-auto p-6 bg-black/85 border border-white/[0.08] rounded-3xl shadow-[0_25px_60px_rgba(0,0,0,0.9)] backdrop-blur-xl relative z-10"
+          className="mt-10 max-w-md mx-auto p-6 bg-slate-50/80 dark:bg-black/85 border border-slate-205 dark:border-white/[0.08] rounded-3xl shadow-xl backdrop-blur-xl relative z-10"
         >
           <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-blue-500/30 to-transparent" />
           
           <div className="space-y-4">
-            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest font-mono">
+            <h3 className="text-xs font-bold text-slate-550 dark:text-slate-400 uppercase tracking-widest font-mono">
               Authorize Web3 Access
             </h3>
             
-            <p className="text-xs text-slate-300 font-semibold max-w-xs mx-auto leading-relaxed">
+            <p className="text-xs text-slate-650 dark:text-slate-300 font-semibold max-w-xs mx-auto leading-relaxed">
               Connect a compatible SUI wallet to authorize automated routing parameters and view your live treasury balances.
             </p>
 
@@ -160,13 +160,13 @@ export default function LandingPage({ onBypass }: LandingPageProps = {}) {
             </div>
 
             {onBypass && (
-              <div className="pt-2 border-t border-slate-800/60 mt-4 flex flex-col items-center gap-2">
+              <div className="pt-2 border-t border-slate-200 dark:border-slate-800/60 mt-4 flex flex-col items-center gap-2">
                 <span className="text-[9px] text-slate-500 font-bold uppercase tracking-widest font-mono">Or test in sandbox mode</span>
                 <button
                   type="button"
                   id="btn-bypass-wallet"
                   onClick={onBypass}
-                  className="w-full text-xs font-bold text-slate-200 hover:text-white bg-blue-950/45 hover:bg-blue-900/30 border border-blue-900/20 hover:border-blue-850 rounded-xl py-2.5 transition-all text-center cursor-pointer font-sans"
+                  className="w-full text-xs font-bold text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white bg-slate-200/50 dark:bg-blue-950/45 hover:bg-slate-300/60 dark:hover:bg-blue-900/30 border border-slate-250 dark:border-blue-900/20 rounded-xl py-2.5 transition-all text-center cursor-pointer font-sans"
                 >
                   Proceed as Sandbox Guest ➔
                 </button>
@@ -185,7 +185,10 @@ export default function LandingPage({ onBypass }: LandingPageProps = {}) {
       <section className="grid grid-cols-1 md:grid-cols-2 gap-6 px-1">
         
         {/* LIVE YIELD TICKER DEMO CARD */}
-        <div className="bg-black/75 border border-white/[0.08] p-6 rounded-3xl flex flex-col justify-between shadow-lg relative overflow-hidden backdrop-blur-xl">
+        <motion.div 
+          whileHover={{ y: -4, transition: { type: 'spring', stiffness: 450, damping: 25 } }}
+          className="bg-black/75 border border-white/[0.08] p-6 rounded-3xl flex flex-col justify-between shadow-lg relative overflow-hidden backdrop-blur-xl sui-card-shimmer"
+        >
           <div className="absolute top-0 right-0 w-24 h-24 bg-green-500/5 rounded-full blur-xl pointer-events-none" />
           
           <div className="space-y-4">
@@ -234,10 +237,13 @@ export default function LandingPage({ onBypass }: LandingPageProps = {}) {
               Minimum Locked: <span className="font-bold text-slate-300 block mt-0.5">0.00 SUI (Unbounded)</span>
             </div>
           </div>
-        </div>
+        </motion.div>
 
         {/* INTERACTIVE PAYSTREAM AUTOROUTING SANDBOX */}
-        <div className="bg-black/75 border border-white/[0.08] p-6 rounded-3xl flex flex-col justify-between shadow-lg relative overflow-hidden backdrop-blur-xl">
+        <motion.div 
+          whileHover={{ y: -4, transition: { type: 'spring', stiffness: 450, damping: 25 } }}
+          className="bg-black/75 border border-white/[0.08] p-6 rounded-3xl flex flex-col justify-between shadow-lg relative overflow-hidden backdrop-blur-xl sui-card-shimmer"
+        >
           <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/5 rounded-full blur-xl pointer-events-none" />
           
           <div className="space-y-4">
@@ -353,7 +359,7 @@ export default function LandingPage({ onBypass }: LandingPageProps = {}) {
               Automatic Routing: <span className="font-bold text-green-400 block mt-0.5">Fully Enabled</span>
             </div>
           </div>
-        </div>
+        </motion.div>
       </section>
 
       {/* APY PROJECTIONS CALCULATOR SECTION */}

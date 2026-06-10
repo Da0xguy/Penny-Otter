@@ -51,8 +51,6 @@ import {
   Target,
   History,
   Droplets,
-  QrCode,
-  Camera,
   X,
   Settings,
   Briefcase,
@@ -64,7 +62,6 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { ConnectButton, useCurrentAccount, useSuiClient, useSuiClientQuery, useSignAndExecuteTransaction } from '@mysten/dapp-kit';
 import { Transaction } from '@mysten/sui/transactions';
-import jsQR from 'jsqr';
 
 // ---------------- FIREBASE & CLOUD DATABASE PERSISTENCE SERVICES ----------------
 import { auth } from './firebase';
@@ -210,287 +207,6 @@ function AnimatedSuiBalance({ value, isVisible, onClick }: { value: number; isVi
   );
 }
 
-interface QrScannerOverlayProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onScanSuccess: (address: string) => void;
-  title?: string;
-}
-
-function QrScannerOverlay({ isOpen, onClose, onScanSuccess, title = "Scan QR Code" }: QrScannerOverlayProps) {
-  const videoRef = useRef<HTMLVideoElement | null>(null);
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
-
-  const [hasPermission, setHasPermission] = useState<boolean | null>(null);
-  const [activeCameraId, setActiveCameraId] = useState<string | null>(null);
-  const [cameras, setCameras] = useState<MediaDeviceInfo[]>([]);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [scanSpeed, setScanSpeed] = useState<'idle' | 'scanning' | 'success'>('idle');
-
-  // Webcam Setup & Real-time decoding
-  useEffect(() => {
-    if (!isOpen) return;
-
-    let isMounted = true;
-    let localStream: MediaStream | null = null;
-    let animFrame: number | null = null;
-
-    async function initWebcam() {
-      try {
-        setErrorMsg(null);
-        setScanSpeed('scanning');
-        
-        // request permissions and get devices
-        const constraints: MediaStreamConstraints = {
-          video: activeCameraId ? { deviceId: { exact: activeCameraId } } : { facingMode: 'environment' }
-        };
-
-        const stream = await navigator.mediaDevices.getUserMedia(constraints);
-        if (!isMounted) {
-          stream.getTracks().forEach(track => track.stop());
-          return;
-        }
-
-        localStream = stream;
-        setHasPermission(true);
-
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          videoRef.current.setAttribute("playsinline", "true");
-          videoRef.current.play().catch(e => console.log("Video playback delayed:", e));
-        }
-
-        // List cameras
-        try {
-          const devices = await navigator.mediaDevices.enumerateDevices();
-          const videoDevices = devices.filter(d => d.kind === 'videoinput');
-          setCameras(videoDevices);
-        } catch (e) {
-          console.warn("Failed accessing camera list:", e);
-        }
-
-        // Processing loop
-        const processFrame = () => {
-          if (!isMounted) return;
-          const video = videoRef.current;
-          const canvas = canvasRef.current;
-
-          if (video && canvas && video.readyState === video.HAVE_ENOUGH_DATA) {
-            const ctx = canvas.getContext('2d');
-            if (ctx) {
-              canvas.width = Math.min(video.videoWidth, 480);
-              canvas.height = Math.min(video.videoHeight, 480);
-              
-              // Draw scaled video frame onto analysis canvas
-              ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-              
-              const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-              // Decode using real jsQR parser!
-              const code = jsQR(imgData.data, imgData.width, imgData.height, {
-                inversionAttempts: "dontInvert"
-              });
-
-              if (code && code.data) {
-                const checkedStr = code.data.trim();
-                // Match SUI Address signature (hex with optional Ox of right length)
-                const addressMatch = checkedStr.match(/(0x)?[0-9a-fA-F]{64}/);
-                const resultAddress = addressMatch ? addressMatch[0] : checkedStr;
-
-                if (resultAddress) {
-                  setScanSpeed('success');
-                  onScanSuccess(resultAddress);
-                  isMounted = false;
-                  return;
-                }
-              }
-            }
-          }
-          animFrame = requestAnimationFrame(processFrame);
-        };
-
-        animFrame = requestAnimationFrame(processFrame);
-
-      } catch (err: any) {
-        console.error("Camera connection failed:", err);
-        setHasPermission(false);
-        setErrorMsg("Webcam access is restricted or unavailable. Please choose an image containing a SUI Address QR Code below.");
-      }
-    }
-
-    initWebcam();
-
-    return () => {
-      isMounted = false;
-      if (localStream) {
-        localStream.getTracks().forEach(track => track.stop());
-      }
-      if (animFrame) {
-        cancelAnimationFrame(animFrame);
-      }
-    };
-  }, [isOpen, activeCameraId]);
-
-  // Handle uploaded image fallback scanning
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (evt) => {
-      const img = new Image();
-      img.onload = () => {
-        const tempCanvas = document.createElement('canvas');
-        tempCanvas.width = img.width;
-        tempCanvas.height = img.height;
-        const ctx = tempCanvas.getContext('2d');
-        if (ctx) {
-          ctx.drawImage(img, 0, 0);
-          const iData = ctx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
-          const result = jsQR(iData.data, iData.width, iData.height);
-          if (result && result.data) {
-            setScanSpeed('success');
-            onScanSuccess(result.data.trim());
-          } else {
-            alert("No valid QR Code matrix detected in this image. Please supply a high-contrast QR containing a valid SUI wallet address.");
-          }
-        }
-      };
-      img.src = evt.target?.result as string;
-    };
-    reader.readAsDataURL(file);
-  };
-
-  if (!isOpen) return null;
-
-  return (
-    <div className="fixed inset-0 z-55 flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-lg font-sans">
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95, y: 10 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.95, y: 10 }}
-        className="w-full max-w-md bg-[#0a0f1d] border border-white/10 rounded-3xl p-6 shadow-2xl relative overflow-hidden"
-      >
-        <div className="flex justify-between items-center mb-4 pb-3 border-b border-white/5">
-          <div className="flex items-center gap-2">
-            <QrCode className="w-5 h-5 text-blue-400" />
-            <div>
-              <h3 className="text-white font-bold text-sm tracking-wide">{title}</h3>
-              <p className="text-[10px] text-slate-400">Scan webcam streams, upload files, or select demo targets.</p>
-            </div>
-          </div>
-          <button
-            onClick={onClose}
-            className="text-slate-400 hover:text-white transition-colors cursor-pointer border-none bg-transparent text-lg font-bold"
-          >
-            &times;
-          </button>
-        </div>
-
-        {/* Camera stream or Error State */}
-        <div className="relative aspect-square w-full rounded-2xl bg-black overflow-hidden border border-white/5 mb-4 flex flex-col justify-center items-center">
-          {hasPermission ? (
-            <>
-              <video
-                ref={videoRef}
-                className="w-full h-full object-cover transform scale-x-[-1]"
-                muted
-                playsInline
-              />
-              {/* Scan box indicator overlay */}
-              <div className="absolute inset-8 border-2 border-dashed border-blue-500/60 rounded-xl pointer-events-none flex items-center justify-center">
-                <div className="w-10 h-10 border-t-4 border-l-4 border-blue-400 absolute top-0 left-0 rounded-tl-md" />
-                <div className="w-10 h-10 border-t-4 border-r-4 border-blue-400 absolute top-0 right-0 rounded-tr-md" />
-                <div className="w-10 h-10 border-b-4 border-l-4 border-blue-400 absolute bottom-0 left-0 rounded-bl-md" />
-                <div className="w-10 h-10 border-b-4 border-r-4 border-blue-400 absolute bottom-0 right-0 rounded-br-md" />
-                
-                {scanSpeed === 'scanning' && (
-                  <div className="w-full h-1 bg-gradient-to-r from-transparent via-blue-400 to-transparent absolute top-1/2 -translate-y-1/2 animate-bounce" />
-                )}
-              </div>
-            </>
-          ) : (
-            <div className="p-6 text-center space-y-3">
-              <Camera className="w-10 h-10 text-slate-500 mx-auto animate-pulse" />
-              <p className="text-xs text-slate-400 leading-relaxed font-sans">{errorMsg || "Connecting to camera feed..."}</p>
-            </div>
-          )}
-          
-          <canvas ref={canvasRef} className="hidden" />
-        </div>
-
-        {/* Camera Selector */}
-        {cameras.length > 1 && (
-          <div className="mb-3 text-left">
-            <label className="text-[9px] text-slate-400 uppercase tracking-widest block mb-1 font-bold">Switch Video Ingest</label>
-            <select
-              value={activeCameraId || ''}
-              onChange={(e) => setActiveCameraId(e.target.value)}
-              className="w-full bg-slate-900 border border-white/5 hover:border-white/10 rounded-lg p-2 text-[10px] text-slate-300 font-bold focus:outline-none focus:border-blue-500"
-            >
-              {cameras.map((cam, idx) => (
-                <option key={cam.deviceId} value={cam.deviceId}>
-                  {cam.label || `Camera ${idx + 1}`}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
-
-        {/* File Uploader Fallback */}
-        <div className="space-y-3.5 text-left border-t border-white/5 pt-3">
-          <div className="flex justify-between items-center text-[10px] text-slate-400">
-            <span className="uppercase tracking-wider font-extrabold">File Decryptor</span>
-            <span className="text-[9px] font-mono bg-blue-500/10 text-blue-400 px-1.5 py-0.5 rounded">REAL TIME</span>
-          </div>
-          
-          <div className="flex gap-2">
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              onChange={handleFileUpload}
-              className="hidden"
-            />
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              className="flex-1 py-2 bg-slate-900 hover:bg-slate-800 text-slate-300 rounded-xl text-xs font-bold border border-white/5 transition-all text-center cursor-pointer"
-            >
-              Upload QR Image File
-            </button>
-          </div>
-        </div>
-
-        {/* Quick Testing SUI addresses selector */}
-        <div className="space-y-2 border-t border-white/5 pt-3 mt-3 text-left">
-          <label className="block text-[10px] text-slate-400 uppercase tracking-wider font-extrabold">Demo Addresses (Quick-Fill Simulator)</label>
-          <div className="grid grid-cols-1 gap-1.5">
-            {[
-              { label: 'Active SUI Payee', address: '0x3f5c8ca28e9301da01dfb0cb901b028dfac90da01fd8' },
-              { label: 'PennyOtter Stream Routing', address: '0x8b321ca22e239ffd15b0ca1dfac22da02fd81c88' },
-              { label: 'Multisig Custody Vault', address: '0x777dfac22da02fd81c883f5c8ca28e9301da01dfbcba' }
-            ].map(item => (
-              <button
-                key={item.address}
-                onClick={() => {
-                  setScanSpeed('success');
-                  onScanSuccess(item.address);
-                }}
-                className="w-full text-left bg-blue-500/5 hover:bg-blue-500/10 border border-blue-500/10 hover:border-blue-500/20 px-3 py-1.5 rounded-lg flex justify-between items-center transition-all cursor-pointer text-[10px] text-slate-300"
-              >
-                <div>
-                  <span className="font-extrabold block text-blue-400 leading-tight">{item.label}</span>
-                  <span className="font-mono text-[9px] text-slate-500 tracking-tight block">{item.address.slice(0,12)}...{item.address.slice(-10)}</span>
-                </div>
-                <span className="text-[9px] font-bold text-blue-400 uppercase tracking-wide bg-blue-500/10 px-1.5 py-0.5 rounded">Scan</span>
-              </button>
-            ))}
-          </div>
-        </div>
-      </motion.div>
-    </div>
-  );
-}
 
 export default function App() {
   const currentAccount = useCurrentAccount();
@@ -870,21 +586,8 @@ export default function App() {
   const [isServiceModalOpen, setIsServiceModalOpen] = useState(false);
   const [addMoneyAmount, setAddMoneyAmount] = useState('50');
 
-  // Custom QR Code scanner states
-  const [isQrScannerActive, setIsQrScannerActive] = useState(false);
-  const [qrScannerTargetField, setQrScannerTargetField] = useState<'add_money_source' | 'transfer_recipient'>('add_money_source');
   const [customAddMoneySourceAddress, setCustomAddMoneySourceAddress] = useState('');
 
-  const handleQrScanSuccess = (address: string) => {
-    if (qrScannerTargetField === 'add_money_source') {
-      setCustomAddMoneySourceAddress(address);
-      showNotification(`Set Route Source to: ${address.slice(0, 10)}...`, 'success');
-    } else {
-      setMockSendAddress(address);
-      showNotification(`Set Recipient to: ${address.slice(0, 10)}...`, 'success');
-    }
-    setIsQrScannerActive(false);
-  };
   const [addMoneyMode, setAddMoneyMode] = useState<'auto_split' | 'incoming_banner'>('auto_split');
   const [addMoneyStep, setAddMoneyStep] = useState<'idle' | 'handshake' | 'signature' | 'broadcasting' | 'complete'>('idle');
   const [bypassed, setBypassed] = useState<boolean>(() => {
@@ -2167,13 +1870,23 @@ export default function App() {
       
       {/* Background Ambient Radial Glows */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
-        <div className="absolute top-[-15%] left-[-15%] w-[65%] h-[65%] bg-blue-500/5 rounded-full blur-[150px] animate-glow-slow" />
-        <div className="absolute bottom-[10%] right-[-10%] w-[55%] h-[55%] bg-indigo-500/4 rounded-full blur-[160px] animate-glow-slower" />
-        <div className="absolute top-[35%] left-[25%] w-[45%] h-[45%] bg-sky-500/3 rounded-full blur-[120px]" />
+        <div className="absolute top-[-15%] left-[-15%] w-[65%] h-[65%] bg-blue-500/10 dark:bg-blue-500/5 rounded-full blur-[150px] animate-glow-slow" />
+        <div className="absolute bottom-[10%] right-[-10%] w-[55%] h-[55%] bg-indigo-500/8 dark:bg-indigo-500/4 rounded-full blur-[160px] animate-glow-slower" />
+        <div className="absolute top-[35%] left-[25%] w-[45%] h-[45%] bg-sky-500/6 dark:bg-sky-500/3 rounded-full blur-[120px] animate-float-water" />
+      </div>
+
+      {/* Dynamic Water Wave Background (Native Sui brand styled vector) */}
+      <div className="absolute inset-x-0 top-0 h-[480px] overflow-hidden pointer-events-none z-0 opacity-40 select-none">
+        <svg className="absolute w-[200%] h-full text-blue-500/[0.04] dark:text-blue-500/[0.02] fill-current animate-wave-motion" viewBox="0 0 1440 400" preserveAspectRatio="none">
+          <path d="M0,160 C320,320 640,-160 960,160 C1280,480 1600,-160 1920,160 L1920,400 L0,300 Z" />
+        </svg>
+        <svg className="absolute w-[200%] h-full text-sky-500/[0.03] dark:text-sky-300/[0.012] fill-current animate-wave-motion" style={{ animationDuration: '24s', animationDelay: '-6s' }} viewBox="0 0 1440 400" preserveAspectRatio="none">
+          <path d="M0,240 C360,80 720,400 1080,240 C1440,80 1800,400 2160,240 L2160,400 L0,400 Z" />
+        </svg>
       </div>
 
       {/* Modern thin neon mesh layout line overlay */}
-      <div className="absolute inset-x-0 top-0 h-[500px] bg-gradient-to-b from-blue-500/[0.02] to-transparent pointer-events-none" />
+      <div className="absolute inset-x-0 top-0 h-[500px] bg-gradient-to-b from-blue-500/[0.03] to-transparent pointer-events-none" />
 
       {/* 1. TOP HEADER & TELEMETRY NAV BAR */}
       <header className="glass-header sticky top-0 z-50">
@@ -2233,7 +1946,10 @@ export default function App() {
         ) : (
           <>
             {/* 1. DARK GLASSY WALLET MASTER PANEL (Inspired by user image with dark glass option) */}
-            <div className="glass-panel text-white rounded-3xl p-6 shadow-2xl relative overflow-hidden text-left max-w-4xl mx-auto">
+            <motion.div 
+              whileHover={{ y: -3, transition: { type: 'spring', stiffness: 400, damping: 20 } }}
+              className="glass-panel text-white rounded-3xl p-6 shadow-2xl relative overflow-hidden text-left max-w-4xl mx-auto sui-card-shimmer"
+            >
               {/* Decorative grid pattern & halos in alignment with the style sheet */}
               <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:16px_16px] pointer-events-none opacity-30" />
               <div className="absolute -top-16 -left-16 w-48 h-48 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none animate-pulse" />
@@ -2331,10 +2047,13 @@ export default function App() {
                   <span className="text-[10px] sm:text-xs font-bold text-slate-300 group-hover:text-white font-sans mt-0.5 transition-colors">Withdrawal</span>
                 </button>
               </div>
-            </div>
+            </motion.div>
 
             {/* 2. PAYMENT CATEGORY GRID (Inspired by user image) */}
-            <div className="glass-panel p-5 rounded-3xl shadow-xl border border-white/5 relative overflow-hidden max-w-4xl mx-auto text-left">
+            <motion.div 
+              whileHover={{ y: -3, transition: { type: 'spring', stiffness: 400, damping: 20 } }}
+              className="glass-panel p-5 rounded-3xl shadow-xl border border-white/5 relative overflow-hidden max-w-4xl mx-auto text-left sui-card-shimmer"
+            >
               <h3 className="text-white font-bold text-xs font-sans uppercase tracking-widest mb-4 px-2 flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                 Payments & Yield Services
@@ -2379,7 +2098,7 @@ export default function App() {
                   )
                 })}
               </div>
-            </div>
+            </motion.div>
 
             {/* 3. REAL-TIME BLOCKCHAIN POPUP / INCOMING ALERTS */}
             <AnimatePresence>
@@ -2982,18 +2701,6 @@ export default function App() {
                                 <div className="space-y-1.5">
                                   <div className="flex justify-between items-center text-[10.5px] font-bold uppercase text-slate-400 font-sans tracking-wide">
                                     <label>Recipient SUI Address</label>
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        setQrScannerTargetField('transfer_recipient');
-                                        setIsQrScannerActive(true);
-                                      }}
-                                      className="flex items-center gap-1 text-blue-400 hover:text-blue-300 font-bold bg-transparent border-none cursor-pointer text-[10px] outline-none"
-                                      title="Scan recipient SUI address via Camera"
-                                    >
-                                      <QrCode className="w-3 md:w-3.5 h-3 md:h-3.5" />
-                                      <span>Scan QR Code</span>
-                                    </button>
                                   </div>
                                   <input
                                     type="text"
@@ -3120,22 +2827,10 @@ export default function App() {
                       </div>
                     </div>
 
-                    {/* SUI Source Address with QR Code Scanner */}
+                    {/* SUI Source Address input */}
                     <div className="space-y-1.5 text-left">
                       <div className="flex justify-between items-center text-[10px] text-slate-400 font-extrabold uppercase tracking-wider">
                         <span>Source SUI Address (Optional)</span>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setQrScannerTargetField('add_money_source');
-                            setIsQrScannerActive(true);
-                          }}
-                          className="flex items-center gap-1 text-blue-400 hover:text-blue-300 font-bold bg-transparent border-none cursor-pointer text-[10px] outline-none"
-                          title="Scan QR Code Address via Camera"
-                        >
-                          <QrCode className="w-3 md:w-3.5 h-3 md:h-3.5" />
-                          <span>Scan Address</span>
-                        </button>
                       </div>
                       
                       <div className="relative">
@@ -3143,7 +2838,7 @@ export default function App() {
                           type="text"
                           value={customAddMoneySourceAddress}
                           onChange={(e) => setCustomAddMoneySourceAddress(e.target.value)}
-                          placeholder="Default or scan SUI address (0x...)"
+                          placeholder="Default SUI address (0x...)"
                           className="w-full glass-input text-[11px] px-3.5 py-2.5 rounded-xl pr-10 text-white font-mono focus:outline-none focus:border-blue-500/60 placeholder-slate-500 font-bold"
                         />
                         {customAddMoneySourceAddress && (
@@ -3336,17 +3031,7 @@ export default function App() {
         )}
       </div>
 
-      {/* 4. REAL-TIME QR CODE CAMERA VIEW SCANNER MODAL OVERLAY */}
-      <AnimatePresence>
-        {isQrScannerActive && (
-          <QrScannerOverlay
-            isOpen={isQrScannerActive}
-            onClose={() => setIsQrScannerActive(false)}
-            onScanSuccess={handleQrScanSuccess}
-            title={qrScannerTargetField === 'add_money_source' ? "Scan Source SUI Wallet Address" : "Scan Destination SUI Recipient Address"}
-          />
-        )}
-      </AnimatePresence>
+
 
       {/* 5. PREFERENCES & GENERAL SETTINGS MODAL */}
       <AnimatePresence>
